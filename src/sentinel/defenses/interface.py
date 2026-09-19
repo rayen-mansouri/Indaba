@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -56,6 +57,7 @@ class DefenseRequest(_Strict):
 
     run_id: str
     step_id: int
+    runtime_timestamp: datetime | None = None
     user_goal: str
     conversation: list[ConversationItem] = Field(default_factory=list)
     observation: ObservationView | None = None

@@ -15,7 +15,9 @@ from sentinel.firewall.records import (
     TaskScope,
     WorkflowState,
 )
+from sentinel.firewall.runtime import GuardedPreparation, SentinelFirewallDefense
 from sentinel.firewall.toolspecs import ToolManifest, ToolSpec, build_official_tool_manifest
+from sentinel.firewall.trace import TraceContinuityReport, TraceIntegrityError, verify_digest_linked_trace
 
 __all__ = [
     "ApprovalRecord",
@@ -30,14 +32,19 @@ __all__ = [
     "GateEvaluator",
     "GateName",
     "GateResult",
+    "GuardedPreparation",
     "NormalizedAction",
     "PolicySnapshot",
     "ProvenanceGraph",
+    "SentinelFirewallDefense",
     "SourceNode",
     "TaskScope",
     "ToolManifest",
     "ToolSpec",
+    "TraceContinuityReport",
+    "TraceIntegrityError",
     "TrustedActionAdapters",
     "WorkflowState",
     "build_official_tool_manifest",
+    "verify_digest_linked_trace",
 ]

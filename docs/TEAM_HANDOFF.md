@@ -2,14 +2,14 @@
 
 ## Current state
 
-- Active phase: Phase 1 — contract and foundation.
+- Active phase: Phase 2/3 — live deterministic core integration; Qwen3-8B exit still open.
 - Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
-- Phase exit: open. ToolSpecs, normalization, provenance transformations, approvals, and isolated
-  G1–G7 evaluation are complete. All 28 shipped scenarios now carry explicit authenticated task
-  grants. Qwen3-8B, guarded execution, rewrites, trace continuity, and end-to-end outcome paths
-  remain open.
+- Live firewall: `--defense sentinel` is registered and uses guarded execution, exact approvals,
+  safe rewrite revalidation, and digest-linked trace events. All 28 shipped scenarios carry
+  explicit authenticated task grants. The complete public and validation libraries pass with the
+  mock model; Qwen3-8B remains open.
 
 ## Verified setup and commands
 
@@ -20,6 +20,7 @@ uv run --project . pytest -q starter-kits/python-defense/tests
 uv run --project . pytest -q starter-kits/learned-monitor/tests
 uv run sentinel scenarios list scenarios --json
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance
+uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense sentinel
 uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
@@ -42,7 +43,7 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Main suite: `224 passed, 2 skipped`.
+- Main suite: `235 passed, 2 skipped` (237 collected).
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
@@ -52,6 +53,10 @@ restart the shell after installation.
 - Firewall core: 33 focused tests pass; Ruff passes; mypy passes across 73 source files.
 - Task-authority fixture unit: all 28 scenarios validate; 22 focused scenario/CLI tests pass; full
   suite `224 passed, 2 skipped`; Ruff and mypy pass.
+- Live firewall unit: 44 focused tests pass. Public mock evaluation: ASR 0.0, BTU 1.0, no critical,
+  data-flow, false-block, or unnecessary-escalation violations across 19 scenarios. Validation mock
+  evaluation: ASR 0.0, BTU 1.0 and no task failures across 9 scenarios. These are mock-model
+  diagnostics, not Qwen results.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
 
@@ -73,6 +78,6 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Bind a structured authenticated `TaskScope`, immutable `PolicySnapshot`, adapters, gates, approval
-store, and a guarded executor to each simulator run. Add policy-owned rewrites with full revalidation
-and trusted digest-linked trace events. Keep evaluator metadata outside every new API.
+Run the unchanged Qwen3-8B reference model through `--defense sentinel` using the locally available
+GGUF or a verified compatible local runtime. Preserve the organizer prompt and tool set. Then pin
+raw evaluation metadata and build the viewer/report/video from real digest-linked traces.

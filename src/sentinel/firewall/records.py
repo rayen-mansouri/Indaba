@@ -55,6 +55,7 @@ class SourceNode(_Frozen):
     source_kind: str = Field(min_length=1, max_length=64)
     trust_label: TrustLevel
     sensitivity: DataSensitivity = DataSensitivity.UNKNOWN
+    destination_restricted: bool = False
     allowed_destinations: tuple[TrustLevel, ...] = ()
     parent_ids: tuple[str, ...] = ()
     transformation: Transformation = Transformation.DIRECT
@@ -65,6 +66,8 @@ class SourceNode(_Frozen):
             raise ValueError("transformed source nodes require at least one parent")
         if self.node_id in self.parent_ids:
             raise ValueError("a source node cannot be its own parent")
+        if not self.destination_restricted and self.allowed_destinations:
+            raise ValueError("allowed destinations require an explicit destination restriction")
         return self
 
 

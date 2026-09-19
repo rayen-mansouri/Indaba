@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from enum import StrEnum
+from fnmatch import fnmatchcase
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +58,10 @@ _APPROVAL_REASONS = {
     ApprovalStatus.INVALID_ROLE: "APPROVAL_INVALID_ROLE",
     ApprovalStatus.REPLAYED: "APPROVAL_REPLAYED",
 }
+
+
+def _matches_constraint(value: str, constraints: tuple[str, ...]) -> bool:
+    return any(fnmatchcase(value, constraint) for constraint in constraints)
 
 
 class GateEvaluator:
@@ -152,7 +157,9 @@ class GateEvaluator:
             if not set(spec.capabilities).issubset(grant.capabilities):
                 codes.append("TASK_CAPABILITY_DENIED")
             resources = [str(action.arguments[field]) for field in spec.resource_fields if field in action.arguments]
-            if resources and (not grant.resources or any(value not in grant.resources for value in resources)):
+            if resources and (
+                not grant.resources or any(not _matches_constraint(value, grant.resources) for value in resources)
+            ):
                 codes.append("TASK_RESOURCE_DENIED")
             amounts = [
                 float(value)
@@ -240,6 +247,10 @@ class GateEvaluator:
         )
 
     def _destination_trust(self, destination: str) -> TrustLevel:
+        if destination == "authenticated_user_sink":
+            return TrustLevel.AUTHENTICATED_USER
+        if destination == "trusted_internal_sink":
+            return TrustLevel.TRUSTED_INTERNAL
         if "@" in destination:
             domain = destination.rsplit("@", 1)[-1].lower()
             if domain in self.destinations.internal_email_domains:
@@ -248,17 +259,24 @@ class GateEvaluator:
         return TrustLevel.TRUSTED_INTERNAL
 
     def _g6(self, context: DecisionContext, spec: ToolSpec | None) -> GateResult:
-        if spec is None or not spec.payload_fields:
+        action = context.candidate.executable
+        payload_fields: tuple[str, ...]
+        destinations: tuple[str, ...]
+        if spec is None and action.type in (ActionType.RESPOND, ActionType.MEMORY_WRITE):
+            payload_fields = ("content",)
+            destinations = (
+                "authenticated_user_sink" if action.type is ActionType.RESPOND else "trusted_internal_sink",
+            )
+        elif spec is not None:
+            payload_fields = tuple(
+                field for field in spec.payload_fields if action.arguments.get(field) not in (None, "")
+            )
+            destinations = context.candidate.canonical_destinations or ("trusted_internal_sink",)
+        else:
             return GateResult(gate=GateName.G6_CONFIDENTIALITY, applicable=False, passed=True)
-        payload_fields = tuple(
-            field
-            for field in spec.payload_fields
-            if context.candidate.executable.arguments.get(field) not in (None, "")
-        )
         if not payload_fields:
             return GateResult(gate=GateName.G6_CONFIDENTIALITY, applicable=False, passed=True)
         nodes = {node.node_id: node for node in context.provenance}
-        destinations = context.candidate.canonical_destinations or ("trusted_internal_sink",)
         codes: list[str] = []
         basis: list[str] = []
         for field in payload_fields:
@@ -272,9 +290,12 @@ class GateEvaluator:
                 trust = self._destination_trust(destination)
                 if sensitivity is DataSensitivity.UNKNOWN:
                     codes.append("UNKNOWN_SENSITIVITY")
-                elif trust.rank > TrustLevel.TRUSTED_INTERNAL.rank and sensitivity is not DataSensitivity.PUBLIC:
+                elif (
+                    trust.rank > TrustLevel.TRUSTED_INTERNAL.rank
+                    and sensitivity.rank >= DataSensitivity.CONFIDENTIAL.rank
+                ):
                     codes.append("SENSITIVE_EGRESS")
-                if any(node.allowed_destinations and trust not in node.allowed_destinations for node in dependencies):
+                if any(node.destination_restricted and trust not in node.allowed_destinations for node in dependencies):
                     codes.append("DESTINATION_SENSITIVITY_DENIED")
                 basis.append(f"{field}:{sensitivity.value}->{trust.value}")
         return GateResult(
@@ -289,9 +310,11 @@ class GateEvaluator:
         if spec is None or not spec.destination_fields:
             return GateResult(gate=GateName.G7_DESTINATION, applicable=False, passed=True)
         grant = context.task_scope.grant_for(spec.name)
-        allowed = set(grant.destinations) if grant else set()
+        allowed = grant.destinations if grant else ()
         mismatched = [
-            destination for destination in context.candidate.canonical_destinations if destination not in allowed
+            destination
+            for destination in context.candidate.canonical_destinations
+            if not _matches_constraint(destination, allowed)
         ]
         passed = (
             spec.name in self.policy.allowed_tools and bool(context.candidate.canonical_destinations) and not mismatched

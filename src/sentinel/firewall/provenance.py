@@ -45,6 +45,8 @@ class ProvenanceGraph:
         trust_label: TrustLevel,
         sensitivity: DataSensitivity,
         allowed_destinations: tuple[TrustLevel, ...] = (),
+        *,
+        destination_restricted: bool = False,
     ) -> SourceNode:
         node = SourceNode(
             node_id=self._id(),
@@ -53,19 +55,36 @@ class ProvenanceGraph:
             source_kind=source_kind,
             trust_label=trust_label,
             sensitivity=sensitivity,
+            destination_restricted=destination_restricted or bool(allowed_destinations),
             allowed_destinations=allowed_destinations,
         )
         self._nodes[node.node_id] = node
         return node
 
-    def import_provenance(self, provenance: Provenance) -> SourceNode:
+    def import_provenance(
+        self,
+        provenance: Provenance,
+        allowed_destinations: tuple[TrustLevel, ...] = (),
+        *,
+        destination_restricted: bool = False,
+        sensitivity: DataSensitivity | None = None,
+    ) -> SourceNode:
         return self.add_source(
             source_kind=provenance.source_type.value,
             trust_label=provenance.trust_level,
-            sensitivity=_sensitivity(provenance.sensitivity),
+            sensitivity=sensitivity or _sensitivity(provenance.sensitivity),
+            allowed_destinations=allowed_destinations,
+            destination_restricted=destination_restricted,
         )
 
-    def derive(self, parent_ids: tuple[str, ...], transformation: Transformation) -> SourceNode:
+    def derive(
+        self,
+        parent_ids: tuple[str, ...],
+        transformation: Transformation,
+        allowed_destinations: tuple[TrustLevel, ...] = (),
+        *,
+        destination_restricted: bool = False,
+    ) -> SourceNode:
         if transformation is Transformation.DIRECT:
             raise ValueError("derived nodes require a non-direct transformation")
         try:
@@ -81,12 +100,16 @@ class ProvenanceGraph:
             if DataSensitivity.UNKNOWN in sensitivities
             else max(sensitivities, key=lambda item: item.rank)
         )
-        restricted = [set(parent.allowed_destinations) for parent in parents if parent.allowed_destinations]
+        restricted = [set(parent.allowed_destinations) for parent in parents if parent.destination_restricted]
+        if destination_restricted:
+            restricted.append(set(allowed_destinations))
         allowed = tuple(sorted(set.intersection(*restricted), key=lambda item: item.rank)) if restricted else ()
+        destination_restricted = bool(restricted)
         if transformation is Transformation.UNSUPPORTED:
             trust = TrustLevel.ADVERSARY_CONTROLLED
             sensitivity = DataSensitivity.UNKNOWN
             allowed = ()
+            destination_restricted = True
         node = SourceNode(
             node_id=self._id(),
             run_id=self.run_id,
@@ -94,6 +117,7 @@ class ProvenanceGraph:
             source_kind="transformation",
             trust_label=trust,
             sensitivity=sensitivity,
+            destination_restricted=destination_restricted,
             allowed_destinations=allowed,
             parent_ids=parent_ids,
             transformation=transformation,

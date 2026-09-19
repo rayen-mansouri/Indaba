@@ -36,6 +36,7 @@ from sentinel.evaluator.metrics import Metrics, compute_metrics
 from sentinel.evaluator.policy_graders import security_verdict
 from sentinel.evaluator.scoring import ScoreBreakdown, compute_score
 from sentinel.evaluator.task_graders import GradingContext, grade_task
+from sentinel.firewall.runtime import SentinelFirewallDefense
 from sentinel.models.base import ModelAdapter
 from sentinel.models.mock import MockModelAdapter
 from sentinel.storage.runs import ArtifactStore, sanitize_id
@@ -279,7 +280,21 @@ def run_scenario(
     log = EventLog(run_id, clock)
     registry = registry_for_domain(scenario.domain.value)
     gateway = ToolGateway(registry, state)
-    policy = PolicyEngine(load_policy(config.root, scenario.policy_profile), scenario)
+    loaded_policy = load_policy(config.root, scenario.policy_profile)
+    policy = PolicyEngine(loaded_policy, scenario)
+    if isinstance(defense, SentinelFirewallDefense):
+        if scenario.task_authorization is None:
+            raise ValueError("SENTINEL requires runtime-authenticated task_authorization")
+        defense.bind_run(
+            run_id=run_id,
+            task_authorization=scenario.task_authorization,
+            policy=loaded_policy,
+            allowed_tools=tuple(scenario.allowed_tools),
+            registry=registry,
+            state=state,
+            gateway=gateway,
+            log=log,
+        )
     hooks = EvaluationHooks(
         scenario, state, log, policy, attacker, config.attack_mode, competition.attack_simulation.query_budget
     )

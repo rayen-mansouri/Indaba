@@ -36,6 +36,7 @@ from sentinel.defenses.interface import (
     ProvenanceRecord,
     ToolCallSummary,
 )
+from sentinel.firewall.runtime import SentinelFirewallDefense
 from sentinel.models.base import ModelAdapter, ModelError, TurnHints
 from sentinel.tools.base import Sink
 from sentinel.tools.gateway import ToolGateway
@@ -124,6 +125,7 @@ class ReferenceAgent:
         return DefenseRequest(
             run_id=self.log.run_id,
             step_id=step_id,
+            runtime_timestamp=self.clock.tick(),
             user_goal=goal,
             conversation=items,
             observation=ObservationView(
@@ -170,6 +172,13 @@ class ReferenceAgent:
         approved = self.hooks.human_confirm(step_id, turn_index, target)
         if approved:
             self.state.confirmations.add(target.digest())
+        if isinstance(self.defense, SentinelFirewallDefense):
+            self.defense.record_human_approval(
+                target,
+                approved=approved,
+                step_id=step_id,
+                timestamp=self.clock.tick(),
+            )
         self.log.append(
             EventType.HUMAN_CONFIRMATION,
             Actor.HUMAN_SIMULATOR,
@@ -281,6 +290,7 @@ class ReferenceAgent:
                 "rewritten_action": decision.rewritten_action.model_dump(mode="json")
                 if decision.rewritten_action
                 else None,
+                "metadata": decision.metadata,
                 "defense_error": error,
             },
         )
@@ -358,15 +368,38 @@ class ReferenceAgent:
 
         # tool call
         confirmed = action.digest() in self.state.confirmations
-        tool = self.gateway.registry.get(action.tool or "")
+        preparation = None
+        executed_action = action
+        if isinstance(self.defense, SentinelFirewallDefense):
+            preparation = self.defense.prepare_execution(
+                action,
+                step_id=step_id,
+                timestamp=self.clock.tick(),
+            )
+            executed_action = preparation.action
+        tool = self.gateway.registry.get(executed_action.tool or "")
         self.log.append(
             EventType.TOOL_REQUEST,
             Actor.AGENT,
             step_id,
-            {"tool": action.tool, "arguments": action.arguments, "confirmed": confirmed},
+            {
+                "tool": executed_action.tool,
+                "arguments": executed_action.arguments,
+                "confirmed": confirmed,
+                "guarded": preparation is not None,
+            },
         )
-        self.hooks.before_tool(step_id, action, tool)
-        gateway_result = self.gateway.execute(action, step_id, self.clock.tick())
+        if preparation is None or preparation.permitted:
+            self.hooks.before_tool(step_id, executed_action, tool)
+        gateway_result = (
+            self.defense.execute_prepared(
+                preparation,
+                step_id=step_id,
+                timestamp=self.clock.tick(),
+            )
+            if isinstance(self.defense, SentinelFirewallDefense) and preparation is not None
+            else self.gateway.execute(executed_action, step_id, self.clock.tick())
+        )
         outcome = gateway_result.outcome
         ids = self._register(outcome.provenance)
         read_only = tool is not None and tool.capabilities == frozenset({"read"})
@@ -376,7 +409,7 @@ class ReferenceAgent:
             Actor.TOOL_GATEWAY,
             step_id,
             {
-                "tool": action.tool,
+                "tool": executed_action.tool,
                 "succeeded": outcome.succeeded,
                 "error": outcome.error,
                 "result": outcome.result,
@@ -384,9 +417,9 @@ class ReferenceAgent:
             },
             provenance_refs=ids,
         )
-        self.hooks.after_tool(step_id, turn_index, action, gateway_result, confirmed)
+        self.hooks.after_tool(step_id, turn_index, executed_action, gateway_result, confirmed)
         if gateway_result.sink is not None:
-            self.hooks.on_sink(step_id, action, gateway_result.sink)
+            self.hooks.on_sink(step_id, executed_action, gateway_result.sink)
         if self._tool_calls and self._tool_calls[-1].step_id == step_id:
             last = self._tool_calls[-1]
             self._tool_calls[-1] = ToolCallSummary(
@@ -395,5 +428,5 @@ class ReferenceAgent:
         text = json.dumps(outcome.result, ensure_ascii=False, sort_keys=True)
         obs = Observation(FeedbackKind.TOOL_RESULT, text, ids, data=outcome.result)
         self._remember("tool", obs)
-        self.model.observe(Feedback(FeedbackKind.TOOL_RESULT, obs, action=action, succeeded=outcome.succeeded))
+        self.model.observe(Feedback(FeedbackKind.TOOL_RESULT, obs, action=executed_action, succeeded=outcome.succeeded))
         return False

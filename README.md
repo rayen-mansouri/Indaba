@@ -39,16 +39,16 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-latest 2026-09-19 regression result was `224 passed, 2 skipped`; both skips require Windows symlink privilege.
+latest 2026-09-19 regression result was `235 passed, 2 skipped`; both skips require Windows symlink privilege.
 See [BUILD_LOG.md](BUILD_LOG.md) for the exact commands, trace ID, limitations, and current phase,
 and [docs/TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) for continuation notes.
 
-The custom defense foundation lives in `src/sentinel/firewall/`. It currently provides a strict
+The custom defense lives in `src/sentinel/firewall/`. It provides a strict
 versioned ToolSpec manifest for all registered tools, immutable hash-bound policy snapshots,
 authenticated task/workflow records, runtime provenance nodes, and a decision context that cannot
 represent scenario identifiers, reference plans, labels, success conditions, or expected outcomes.
-Gate evaluation and guarded execution are built as later isolated units; code existence is not
-reported as an end-to-end defense result until those exit tests pass.
+It is registered as `--defense sentinel`; every tool execution uses a one-shot guarded permit and
+is revalidated against current authoritative state before the simulator gateway is called.
 
 Every shipped scenario now includes a structured `task_authorization` block issued by the offline
 simulator boundary. It grants tools and capabilities explicitly and can constrain resources,
@@ -56,11 +56,15 @@ destinations, amounts/currency, and selected parameters. It contains no scenario
 attack label, expected outcome, success condition, or reference plan. Other baseline defenses can
 still parse legacy scenarios without this optional field; the SENTINEL runtime will require it.
 
-The isolated core now also includes strict action normalization, trusted destination aliases,
+The live core also includes strict action normalization, trusted destination aliases,
 lineage-preserving decoding/transformation nodes, a protected one-time approval store, and
-deterministic G1–G7 evaluation. It is intentionally not advertised as a live defense yet: binding
-the run-owned task scope, guarded executor, rewrite revalidation, and digest-linked trace events is
-the next integration unit.
+deterministic G1–G7 evaluation. Policy-owned rewrites are validated from scratch and cannot fall
+back to the original action. Security events form a digest-linked proposal → decision → approval or
+rewrite → executor receipt → verified-state chain, checked by `verify_digest_linked_trace`.
+
+The latest mock-model diagnostic run covers all 28 shipped scenarios: public ASR `0.0`, BTU `1.0`;
+validation ASR `0.0`, BTU `1.0`, with no task failures. These are reproducible local diagnostics,
+not Qwen3-8B or final competition claims. The reference-model run is still required.
 
 ## Architecture
 
@@ -108,6 +112,7 @@ needs `uv sync --extra hf` and the weights downloaded ahead of time.
 ```bash
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense allow_all
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance
+uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense sentinel
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance --model qwen3-8b
 uv run sentinel replay artifacts/<eval-group>/<run_id>.jsonl
 ```

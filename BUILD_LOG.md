@@ -6,10 +6,10 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 
 ## Current status
 
-- Active phase: Phase 1 — Contract and foundation
-- Last updated: 2026-09-19 14:22:59 +01:00
-- Phase exit status: In progress
-- Current blocker: The mock-model contract and deterministic core are verified; guarded live execution, rewrite/trace integration, and the reference Qwen3-8B run remain open.
+- Active phase: Phase 2/3 — Live deterministic core integration
+- Last updated: 2026-09-19 17:53:16 +01:00
+- Phase exit status: Mock-model integration passes; reference-model exit remains open
+- Current blocker: Qwen3-8B has not yet run through the live firewall. Evaluation/report artifacts are still mock-model evidence only.
 
 ## Entry template
 
@@ -112,3 +112,17 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Root cause:** Known — the long-horizon scenario is explicitly excluded from the generator.
 - **Resolution or next action:** Added and tested the same typed authorization block directly to the hand-authored scenario. Next bind this object to the firewall runtime and refuse live SENTINEL runs that do not supply it.
 - **Scope cut or limitation:** The schema leaves task authorization optional for backward-compatible third-party scenario parsing. The SENTINEL runtime will fail closed when it is absent; other baseline defenses remain runnable against legacy scenarios.
+
+### 2026-09-19 17:53:16 +01:00 — Phase 2/3 — Live firewall, guarded executor, rewrite, and trace continuity
+
+- **Purpose:** Put the deterministic firewall on the reference-agent execution path and prove all four outcomes without exposing evaluator metadata to the decision or policy APIs.
+- **Plan requirement(s):** Registered `sentinel` defense; run-bound ToolSpecs/policy/task scope; live G1-G7 evaluation; true pause/approval/resume; exact-action guarded execution; one-time approval consumption; policy-owned rewrite with full revalidation and no original fallback; trusted digest-linked security trace; field-scoped sensitivity propagation.
+- **Files changed:** `src/sentinel/firewall/runtime.py`; `src/sentinel/firewall/trace.py`; firewall records/provenance/gates/exports; defense registry/interface; reference agent; evaluator runner/replay; event types; integration tests; documentation.
+- **Commands/tests run:** Focused 44-test firewall suite; full pytest; both starter-kit test suites; full Ruff lint/format; full mypy; end-to-end enterprise/finance/SOC approval scenarios; direct-token attack; complete public and validation mock-model evaluations.
+- **Result:** PASS for mock integration — main suite `235 passed, 2 skipped`; starter kits `6 passed` and `2 passed`; Ruff and mypy pass across 75 source files. Public: 19 scenarios, ASR `0.0`, BTU `1.0`, CVR/FBR/UER `0.0`. Validation: 9 scenarios, ASR `0.0`, BTU `1.0`, CVR/FBR/UER `0.0`, no task failures.
+- **Run, trace, configuration, or commit ID:** Public artifact group `eval-public-sentinel-20260919T165301Z`, digest `f4e9b9fea1944ebdbe6eca27a8099110df9351a59cccf2eff5e46b4ef96d4778`; validation group `eval-validation-sentinel-20260919T165305Z`, digest `0e8b19757e64065fd506488b8d73ba521878659a43c70f9c8bd9b99855946cb7`; commit pending at entry time.
+- **Decision:** The agent may only reach a simulator tool through a one-shot guarded permit. The executor re-normalizes and reevaluates against current authoritative state, consumes any exact approval immediately before execution, and emits a receipt plus verified-state digest. Security trace events identify their trusted emitter and share policy, ToolSpec, normalizer, task, action-digest, and authorized-state links.
+- **Problem observed:** Initial integration over-tainted every field in a restricted structured record. The benign `soc_val_asset_criticality` response was blocked because the record also contained a restricted service token.
+- **Root cause:** Known — canary destination restrictions were attached to the whole JSON observation rather than the specific scalar field containing the canary.
+- **Resolution or next action:** Parse structured tool observations into field-scoped extraction nodes. Each node preserves parent trust, sensitivity, and lineage; only a field that actually carries a canary inherits its destination restriction. The formerly failing scenario and both complete libraries now pass. Next run the unchanged Qwen3-8B reference model, then freeze raw evidence and build the observability/report/video artifacts.
+- **Scope cut or limitation:** Results above use the deterministic mock model and are not reported as Qwen3-8B or final benchmark results. The two Windows symlink tests remain skipped because this host lacks symlink privilege. Risk scores are deterministic gate bands, not empirically calibrated probabilities. The task-authority fixtures are explicit authoring inputs; their scenario-keyed generator is not called or visible during policy selection or decisions.

@@ -35,6 +35,22 @@ def describe(event: Event) -> str:
             return (
                 f"defense {p.get('decision', '?').upper():8} {target} risk={p.get('risk_score')} codes={codes}{error}"
             )
+        case EventType.ACTION_PROPOSAL:
+            action = p.get("original_proposal", {})
+            return f"firewall proposal {action.get('tool') or action.get('type')} digest={p.get('action_digest')}"
+        case EventType.FIREWALL_DECISION:
+            codes = ",".join(p.get("reason_codes", [])) or "-"
+            return f"firewall {p.get('outcome', '?').upper():8} digest={p.get('action_digest')} codes={codes}"
+        case EventType.ACTION_REWRITE:
+            replacement = p.get("replacement", {})
+            return f"rewrite -> {replacement.get('tool') or replacement.get('type')} digest={p.get('action_digest')}"
+        case EventType.APPROVAL_RECORD:
+            return f"approval {p.get('decision')} {p.get('tool')} digest={p.get('action_digest')}"
+        case EventType.EXECUTOR_RECEIPT:
+            status = "ok" if p.get("succeeded") else f"error: {p.get('error')}"
+            return f"executor {p.get('tool')} {status} digest={p.get('action_digest')}"
+        case EventType.STATE_VERIFIED:
+            return f"state verified v{p.get('new_state_version')} digest={p.get('action_digest')}"
         case EventType.HUMAN_CONFIRMATION:
             return f"human {'approved' if p.get('approved') else 'denied'} {p.get('tool')}"
         case EventType.TOOL_REQUEST:
