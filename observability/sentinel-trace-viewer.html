@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SENTINEL Trace Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #12161b;
+      --panel-2: #171c22;
+      --line: #2a323c;
+      --text: #eef2f6;
+      --muted: #98a4b3;
+      --accent: #63d6b5;
+      --allow: #62d394;
+      --block: #ff7373;
+      --escalate: #f5bf61;
+      --rewrite: #71a7ff;
+      --danger-bg: #2a1719;
+      --ok-bg: #12231d;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      min-height: 72px; padding: 14px 24px; border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      position: sticky; top: 0; z-index: 10; background: rgba(11, 13, 16, .96);
+    }
+    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    .brand h1 { margin: 0; font-size: 21px; letter-spacing: .08em; }
+    .brand span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .actions { display: flex; gap: 8px; }
+    .button {
+      border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+      border-radius: 7px; padding: 9px 13px;
+    }
+    .button.primary { color: #07100d; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+    .button:hover { border-color: var(--muted); }
+    #fileInput { display: none; }
+    .shell { max-width: 1540px; margin: 0 auto; padding: 22px 24px 40px; }
+    .dropzone {
+      border: 1px dashed #536171; border-radius: 10px; min-height: 310px; padding: 42px;
+      display: grid; place-items: center; text-align: center; background: var(--panel);
+    }
+    .dropzone.dragging { border-color: var(--accent); background: #101c19; }
+    .dropzone h2 { margin: 0 0 10px; font-size: 24px; }
+    .dropzone p { color: var(--muted); max-width: 620px; line-height: 1.6; }
+    .dropzone code { color: var(--accent); }
+    .hidden { display: none !important; }
+    .runline { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+    .runline h2 { margin: 0 0 5px; font-size: 20px; word-break: break-word; }
+    .runline p { margin: 0; color: var(--muted); font-size: 13px; }
+    .integrity {
+      border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; min-width: 230px;
+      font-size: 13px; background: var(--ok-bg); color: var(--allow);
+    }
+    .integrity.bad { background: var(--danger-bg); color: var(--block); }
+    .stats {
+      display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 9px; margin-bottom: 18px;
+    }
+    .stat { border-top: 2px solid var(--line); padding: 11px 12px; background: var(--panel); min-height: 78px; }
+    .stat strong { display: block; font-size: 23px; margin-bottom: 3px; }
+    .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .stat.emphasis { border-top-color: var(--accent); }
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid var(--line);
+      background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 14px;
+    }
+    .filter {
+      padding: 7px 10px; border: 1px solid transparent; background: transparent; color: var(--muted);
+      border-radius: 6px;
+    }
+    .filter.active { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+    .search {
+      margin-left: auto; min-width: 260px; border: 1px solid var(--line); background: var(--bg);
+      color: var(--text); padding: 8px 10px; border-radius: 6px; outline: none;
+    }
+    .search:focus { border-color: var(--accent); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, .75fr); gap: 14px; }
+    .section { border: 1px solid var(--line); background: var(--panel); border-radius: 9px; overflow: hidden; }
+    .section-head {
+      display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+      border-bottom: 1px solid var(--line); background: var(--panel-2);
+    }
+    .section-head h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .07em; }
+    .section-head span { color: var(--muted); font-size: 12px; }
+    .timeline { max-height: 66vh; overflow: auto; }
+    .event {
+      width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent;
+      color: var(--text); text-align: left; padding: 10px 13px; display: grid;
+      grid-template-columns: 48px 96px minmax(130px, 1fr) minmax(180px, 1.5fr); gap: 10px; align-items: center;
+    }
+    .event:hover, .event.selected { background: var(--panel-2); }
+    .seq { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+    .actor { color: var(--muted); font-size: 12px; }
+    .etype { font-weight: 650; font-size: 13px; word-break: break-word; }
+    .summary { color: #c2cad4; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .detail { padding: 14px; max-height: 66vh; overflow: auto; }
+    .detail h4 { margin: 0 0 11px; font-size: 17px; }
+    .detail-meta { display: grid; grid-template-columns: 95px 1fr; gap: 6px 10px; font-size: 12px; margin-bottom: 14px; }
+    .detail-meta dt { color: var(--muted); }
+    .detail-meta dd { margin: 0; word-break: break-all; }
+    pre {
+      margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 7px;
+      background: var(--bg); color: #ced6df; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .pill {
+      display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+      border: 1px solid currentColor;
+    }
+    .allow { color: var(--allow); } .block { color: var(--block); }
+    .escalate { color: var(--escalate); } .rewrite { color: var(--rewrite); }
+    .chains { margin-top: 14px; }
+    .chain-list { display: grid; gap: 1px; background: var(--line); }
+    .chain { background: var(--panel); padding: 12px 14px; display: grid; grid-template-columns: 190px 110px 1fr 110px; gap: 12px; }
+    .digest { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--accent); }
+    .codes { color: #c2cad4; font-size: 12px; }
+    .gates { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .gate { border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; color: var(--muted); font-size: 10px; }
+    .gate.fail { color: var(--block); border-color: #753d43; }
+    .chain .count { color: var(--muted); font-size: 12px; text-align: right; }
+    .empty { padding: 26px 14px; color: var(--muted); text-align: center; }
+    .error-list { margin: 8px 0 0; padding-left: 18px; color: var(--block); }
+    @media (max-width: 1050px) {
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+      .detail, .timeline { max-height: 48vh; }
+      .chain { grid-template-columns: 1fr 100px; }
+      .chain .codes { grid-column: 1 / -1; }
+    }
+    @media (max-width: 700px) {
+      .topbar, .runline { align-items: flex-start; flex-direction: column; }
+      .shell { padding: 16px 12px 30px; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .event { grid-template-columns: 42px 1fr; }
+      .event .actor, .event .summary { grid-column: 2; }
+      .search { width: 100%; min-width: 0; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><h1>SENTINEL</h1><span>digest-linked trace viewer</span></div>
+    <div class="actions">
+      <button class="button" id="resetButton" type="button">Clear</button>
+      <label class="button primary" for="fileInput">Open JSONL</label>
+      <input id="fileInput" type="file" accept=".jsonl,.json,text/plain,application/json">
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="dropzone" id="dropzone">
+      <div>
+        <h2>Inspect a trusted run trace</h2>
+        <p>Drop an official SENTINEL <code>.jsonl</code> artifact here or open one from disk. Processing stays in this browser; the viewer makes no network requests.</p>
+        <label class="button primary" for="fileInput">Choose trace</label>
+      </div>
+    </section>
+
+    <div id="workspace" class="hidden">
+      <div class="runline">
+        <div><h2 id="runTitle"></h2><p id="runSubtitle"></p></div>
+        <div class="integrity" id="integrityBadge"></div>
+      </div>
+      <section class="stats" id="stats"></section>
+      <nav class="toolbar" aria-label="Event filters">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="security">Security path</button>
+        <button class="filter" data-filter="decision">Decisions</button>
+        <button class="filter" data-filter="execution">Execution</button>
+        <button class="filter" data-filter="agent">Agent</button>
+        <button class="filter" data-filter="evaluator">Outcome</button>
+        <input class="search" id="search" type="search" placeholder="Search tool, reason code, destination, payload">
+      </nav>
+
+      <div class="layout">
+        <section class="section">
+          <div class="section-head"><h3>Event timeline</h3><span id="eventCount"></span></div>
+          <div class="timeline" id="timeline"></div>
+        </section>
+        <aside class="section">
+          <div class="section-head"><h3>Event inspection</h3><span>trusted JSONL payload</span></div>
+          <div class="detail" id="detail"></div>
+        </aside>
+      </div>
+
+      <section class="section chains">
+        <div class="section-head"><h3>Digest-linked action chains</h3><span id="chainCount"></span></div>
+        <div class="chain-list" id="chains"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const securityTypes = new Set([
+      "action_proposal", "firewall_decision", "action_rewrite", "approval_record",
+      "executor_receipt", "state_verified"
+    ]);
+    const decisionTypes = new Set(["firewall_decision", "defense_decision", "approval_record"]);
+    const executionTypes = new Set(["tool_request", "tool_result", "executor_receipt", "state_verified"]);
+    const emitterRules = {
+      action_proposal: ["decision_service", "defense"],
+      firewall_decision: ["decision_service", "defense"],
+      action_rewrite: ["decision_service", "defense"],
+      approval_record: ["decision_service", "defense"],
+      executor_receipt: ["guarded_executor", "tool_gateway"],
+      state_verified: ["guarded_executor", "tool_gateway"]
+    };
+    const linkFields = [
+      "action_digest", "policy_version", "policy_hash", "tool_spec_version",
+      "normalizer_version", "authorized_state_version", "task_id"
+    ];
+
+    const app = { events: [], filter: "all", query: "", selected: null, filename: "" };
+    const $ = (id) => document.getElementById(id);
+    const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[char]);
+
+    function parseJsonl(text) {
+      const events = [];
+      text.split(/\r?\n/).forEach((line, index) => {
+        if (!line.trim()) return;
+        try {
+          const event = JSON.parse(line);
+          if (!event || typeof event !== "object" || typeof event.type !== "string") {
+            throw new Error("event object or type is missing");
+          }
+          events.push(event);
+        } catch (error) {
+          throw new Error(`Line ${index + 1}: ${error.message}`);
+        }
+      });
+      if (!events.length) throw new Error("The file contains no events.");
+      const runIds = new Set(events.map((event) => event.run_id));
+      if (runIds.size !== 1) throw new Error("A trace must contain exactly one run_id.");
+      return events.sort((a, b) => Number(a.seq) - Number(b.seq));
+    }
+
+    function linkKey(event) {
+      return linkFields.map((field) => JSON.stringify(event.payload?.[field])).join("|");
+    }
+
+    function inspectIntegrity(events) {
+      const errors = [];
+      const security = events.filter((event) => securityTypes.has(event.type));
+      const byLink = new Map();
+      for (const event of security) {
+        const rule = emitterRules[event.type];
+        if (!rule || event.payload?.emitter !== rule[0] || event.actor !== rule[1]) {
+          errors.push(`${event.event_id}: untrusted ${event.type} emitter`);
+        }
+        const missing = linkFields.filter((field) => !(field in (event.payload || {})));
+        if (missing.length) errors.push(`${event.event_id}: missing ${missing.join(", ")}`);
+        const digest = event.payload?.action_digest;
+        if (typeof digest !== "string" || digest.length !== 24) errors.push(`${event.event_id}: invalid action digest`);
+        const key = linkKey(event);
+        if (!byLink.has(key)) byLink.set(key, []);
+        byLink.get(key).push(event);
+      }
+      let executed = 0;
+      for (const chain of byLink.values()) {
+        const proposals = chain.filter((event) => event.type === "action_proposal");
+        const decisions = chain.filter((event) => event.type === "firewall_decision");
+        const receipts = chain.filter((event) => event.type === "executor_receipt");
+        const states = chain.filter((event) => event.type === "state_verified");
+        const digest = chain[0]?.payload?.action_digest || "unknown";
+        if (chain.some((event) => event.type !== "action_proposal") && !proposals.length) {
+          errors.push(`${digest}: linked security events have no proposal`);
+        }
+        for (const decision of decisions) {
+          if (!proposals.some((proposal) => proposal.seq < decision.seq)) errors.push(`${digest}: decision precedes proposal`);
+        }
+        if (receipts.length !== states.length) errors.push(`${digest}: receipt/state count mismatch`);
+        receipts.forEach((receipt, index) => {
+          executed += 1;
+          if (!decisions.some((decision) => decision.seq < receipt.seq)) errors.push(`${digest}: receipt has no prior decision`);
+          if (!states[index] || receipt.seq >= states[index].seq) errors.push(`${digest}: state result does not follow receipt`);
+        });
+      }
+      return { errors, securityEvents: security.length, chains: byLink.size, executed };
+    }
+
+    function outcomeLabel(events) {
+      const outcome = [...events].reverse().find((event) => event.type === "task_success" || event.type === "task_failure");
+      if (!outcome) return { value: "Unrecorded", className: "escalate" };
+      return outcome.type === "task_success"
+        ? { value: "Task success", className: "allow" }
+        : { value: "Task failure", className: "block" };
+    }
+
+    function decisionValue(event) {
+      return String(event.payload?.outcome || event.payload?.decision || "").toLowerCase();
+    }
+
+    function summarize(event) {
+      const payload = event.payload || {};
+      const decision = decisionValue(event);
+      if (event.type === "firewall_decision") return `${decision.toUpperCase()} · ${(payload.reason_codes || []).join(", ")}`;
+      if (event.type === "action_proposal") return payload.original_proposal?.tool || payload.original_proposal?.type || "candidate action";
+      if (event.type === "action_rewrite") return `replacement: ${payload.replacement?.tool || payload.replacement?.type}`;
+      if (event.type === "executor_receipt") return `${payload.tool || payload.executed_action?.tool || "action"} · ${payload.succeeded ? "succeeded" : "failed"}`;
+      if (event.type === "state_verified") return `state v${payload.resulting_state_version ?? payload.authorized_state_version}`;
+      if (event.type === "tool_request") return payload.tool || "tool request";
+      if (event.type === "tool_result") return `${payload.tool || "tool"} · ${payload.succeeded === false ? "failed" : "ok"}`;
+      if (event.type === "model_output") return payload.content || "model output";
+      if (event.type === "user_message") return payload.text || "user message";
+      if (event.type === "task_success" || event.type === "task_failure") return payload.summary || event.type;
+      return JSON.stringify(payload).slice(0, 180);
+    }
+
+    function renderStats(integrity) {
+      const decisions = app.events.filter((event) => event.type === "firewall_decision");
+      const blocks = decisions.filter((event) => decisionValue(event) === "block").length;
+      const rewrites = decisions.filter((event) => decisionValue(event) === "rewrite").length;
+      const approvals = app.events.filter((event) => event.type === "approval_record").length;
+      const outcome = outcomeLabel(app.events);
+      const rows = [
+        [outcome.value, "Run outcome", `emphasis ${outcome.className}`],
+        [app.events.length, "Events", ""],
+        [decisions.length, "Firewall decisions", ""],
+        [blocks, "Blocked actions", blocks ? "block" : ""],
+        [rewrites, "Safe rewrites", rewrites ? "rewrite" : ""],
+        [`${integrity.executed} / ${approvals}`, "Executions / approvals", ""]
+      ];
+      $("stats").innerHTML = rows.map(([value, label, cls]) =>
+        `<div class="stat ${cls}"><strong>${safe(value)}</strong><span>${safe(label)}</span></div>`
+      ).join("");
+    }
+
+    function eventMatches(event) {
+      const category = app.filter;
+      const categoryMatch = category === "all"
+        || (category === "security" && securityTypes.has(event.type))
+        || (category === "decision" && decisionTypes.has(event.type))
+        || (category === "execution" && executionTypes.has(event.type))
+        || (category === "agent" && (event.actor === "agent" || event.actor === "user"))
+        || (category === "evaluator" && event.actor === "evaluator");
+      if (!categoryMatch) return false;
+      return !app.query || JSON.stringify(event).toLowerCase().includes(app.query);
+    }
+
+    function renderTimeline() {
+      const visible = app.events.filter(eventMatches);
+      $("eventCount").textContent = `${visible.length} of ${app.events.length}`;
+      if (!visible.length) {
+        $("timeline").innerHTML = '<div class="empty">No events match this filter.</div>';
+        return;
+      }
+      $("timeline").innerHTML = visible.map((event) => `
+        <button class="event ${app.selected?.event_id === event.event_id ? "selected" : ""}" data-event-id="${safe(event.event_id)}">
+          <span class="seq">#${String(event.seq).padStart(4, "0")}</span>
+          <span class="actor">${safe(event.actor)}</span>
+          <span class="etype">${safe(event.type)}</span>
+          <span class="summary">${safe(summarize(event))}</span>
+        </button>`).join("");
+      document.querySelectorAll(".event").forEach((button) => button.addEventListener("click", () => {
+        app.selected = app.events.find((event) => event.event_id === button.dataset.eventId);
+        renderTimeline(); renderDetail();
+      }));
+    }
+
+    function renderDetail() {
+      const event = app.selected || app.events[0];
+      if (!event) return;
+      const decision = decisionValue(event);
+      const badge = decision ? `<span class="pill ${safe(decision)}">${safe(decision)}</span>` : "";
+      $("detail").innerHTML = `
+        <h4>${safe(event.type)} ${badge}</h4>
+        <dl class="detail-meta">
+          <dt>Sequence</dt><dd>${safe(event.seq)}</dd>
+          <dt>Step</dt><dd>${safe(event.step_id)}</dd>
+          <dt>Actor</dt><dd>${safe(event.actor)}</dd>
+          <dt>Timestamp</dt><dd>${safe(event.timestamp)}</dd>
+          <dt>Event ID</dt><dd>${safe(event.event_id)}</dd>
+          <dt>Digest</dt><dd>${safe(event.payload?.action_digest || "—")}</dd>
+        </dl>
+        <pre>${safe(JSON.stringify(event.payload || {}, null, 2))}</pre>`;
+    }
+
+    function renderChains() {
+      const grouped = new Map();
+      app.events.filter((event) => securityTypes.has(event.type)).forEach((event) => {
+        const key = linkKey(event);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(event);
+      });
+      const chains = [...grouped.values()].sort((a, b) => a[0].seq - b[0].seq);
+      $("chainCount").textContent = `${chains.length} linked chains`;
+      if (!chains.length) {
+        $("chains").innerHTML = '<div class="empty">This trace has no SENTINEL security events.</div>';
+        return;
+      }
+      $("chains").innerHTML = chains.map((chain) => {
+        const decision = chain.find((event) => event.type === "firewall_decision");
+        const outcome = decisionValue(decision || {});
+        const codes = decision?.payload?.reason_codes || [];
+        const gates = decision?.payload?.gates || [];
+        const receipts = chain.filter((event) => event.type === "executor_receipt").length;
+        const digest = chain[0].payload.action_digest;
+        return `<article class="chain">
+          <div><div class="digest">${safe(digest)}</div><div class="gates">${gates.map((gate) =>
+            `<span class="gate ${gate.applicable && !gate.passed ? "fail" : ""}">${safe(gate.gate)} ${gate.applicable ? (gate.passed ? "pass" : "fail") : "n/a"}</span>`
+          ).join("")}</div></div>
+          <div>${outcome ? `<span class="pill ${safe(outcome)}">${safe(outcome)}</span>` : '<span class="pill">pending</span>'}</div>
+          <div class="codes">${safe(codes.join(" · ") || "No failure reason codes")}</div>
+          <div class="count">${chain.length} events<br>${receipts} receipt${receipts === 1 ? "" : "s"}</div>
+        </article>`;
+      }).join("");
+    }
+
+    function render() {
+      const integrity = inspectIntegrity(app.events);
+      const runId = app.events[0]?.run_id || "unknown run";
+      $("dropzone").classList.add("hidden");
+      $("workspace").classList.remove("hidden");
+      $("runTitle").textContent = runId;
+      $("runSubtitle").textContent = `${app.filename} · ${app.events[0]?.timestamp || "timestamp unavailable"}`;
+      const badge = $("integrityBadge");
+      badge.classList.toggle("bad", integrity.errors.length > 0);
+      badge.innerHTML = integrity.errors.length
+        ? `<strong>${integrity.errors.length} continuity warning${integrity.errors.length === 1 ? "" : "s"}</strong><ul class="error-list">${integrity.errors.slice(0, 4).map((error) => `<li>${safe(error)}</li>`).join("")}</ul>`
+        : `<strong>Trace continuity checks pass</strong><br>${integrity.securityEvents} security events · ${integrity.chains} chains`;
+      renderStats(integrity); renderTimeline(); renderDetail(); renderChains();
+    }
+
+    async function loadFile(file) {
+      try {
+        app.events = parseJsonl(await file.text());
+        app.filename = file.name;
+        app.selected = app.events[0];
+        app.filter = "all"; app.query = "";
+        $("search").value = "";
+        document.querySelectorAll(".filter").forEach((button) => button.classList.toggle("active", button.dataset.filter === "all"));
+        render();
+      } catch (error) {
+        window.alert(`Unable to open trace: ${error.message}`);
+      }
+    }
+
+    $("fileInput").addEventListener("change", (event) => {
+      if (event.target.files?.[0]) loadFile(event.target.files[0]);
+      event.target.value = "";
+    });
+    $("resetButton").addEventListener("click", () => {
+      app.events = []; app.selected = null; app.filename = "";
+      $("workspace").classList.add("hidden"); $("dropzone").classList.remove("hidden");
+    });
+    document.querySelectorAll(".filter").forEach((button) => button.addEventListener("click", () => {
+      app.filter = button.dataset.filter;
+      document.querySelectorAll(".filter").forEach((item) => item.classList.toggle("active", item === button));
+      renderTimeline();
+    }));
+    $("search").addEventListener("input", (event) => { app.query = event.target.value.trim().toLowerCase(); renderTimeline(); });
+    ["dragenter", "dragover"].forEach((name) => $("dropzone").addEventListener(name, (event) => {
+      event.preventDefault(); $("dropzone").classList.add("dragging");
+    }));
+    ["dragleave", "drop"].forEach((name) => $("dropzone").addEventListener(name, (event) => {
+      event.preventDefault(); $("dropzone").classList.remove("dragging");
+    }));
+    $("dropzone").addEventListener("drop", (event) => { if (event.dataTransfer.files?.[0]) loadFile(event.dataTransfer.files[0]); });
+  </script>
+</body>
+</html>

@@ -2,14 +2,16 @@
 
 ## Current state
 
-- Active phase: Phase 2/3 — live deterministic core integration; Qwen3-8B exit still open.
+- Active phase: Phase 5/6 — evidence frozen; final clean-environment verification and external
+  submission/recording remain.
 - Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
 - Live firewall: `--defense sentinel` is registered and uses guarded execution, exact approvals,
   safe rewrite revalidation, and digest-linked trace events. All 28 shipped scenarios carry
   explicit authenticated task grants. The complete public and validation libraries pass with the
-  mock model; Qwen3-8B remains open.
+  mock model. Four local Qwen3-8B traces are committed, including successful finance and SOC benign
+  tasks plus an enterprise attack blocked at the action boundary.
 
 ## Verified setup and commands
 
@@ -43,7 +45,7 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Main suite: `235 passed, 2 skipped` (237 collected).
+- Final main suite: `255 passed, 2 skipped` (257 collected).
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
@@ -59,6 +61,21 @@ restart the shell after installation.
   diagnostics, not Qwen results.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
+
+## Frozen evidence
+
+- Evidence commit: `c05a0b59d2f9b464d2099158ad123f26cc71ba3c`.
+- Full scorecards and deterministic digests: `evidence/manifest.json`.
+- Public/validation full SENTINEL: BTU `1.0`, ASR `0.0`, CVR `0.0`, FBR `0.0`,
+  DFI `1.0`, zero defense errors.
+- Validation provenance baseline: ASR `0.25`, CVR `0.1111`, DFI `0.8889`; encoded-exfil trace
+  paired with SENTINEL under `evidence/traces/comparisons/`.
+- Whole-context validation ablation: BTU `0.8`, FBR `0.0435`; paired asset-criticality traces are
+  committed.
+- Adaptive mutation public run: BTU `1.0`, ASR/CVR/FBR/UER `0.0`, DFI `1.0`.
+- Viewer: `observability/sentinel-trace-viewer.html` (single-file, offline, read-only).
+- Report/declarations/video runbook: `docs/technical-report.md`, `docs/responsible-ai.md`,
+  `docs/model-data-declaration.md`, and `docs/video-script.md`.
 
 ## Security invariants for continuation
 
@@ -78,6 +95,6 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Run the unchanged Qwen3-8B reference model through `--defense sentinel` using the locally available
-GGUF or a verified compatible local runtime. Preserve the organizer prompt and tool set. Then pin
-raw evaluation metadata and build the viewer/report/video from real digest-linked traces.
+Run the final full suite and deterministic-digest reproduction, then verify a fresh clone. Record
+the 5-10 minute video from `docs/video-script.md`. The actual recording/upload, submission URL, and
+receipt require the team's external accounts and cannot be fabricated by a coding agent.

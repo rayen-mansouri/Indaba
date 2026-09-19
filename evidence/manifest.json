@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-09-19T17:28:58Z",
+  "commit": "c05a0b59d2f9b464d2099158ad123f26cc71ba3c",
+  "benchmark_version": "sentinel-bench/0.1.0",
+  "run_seed": 0,
+  "paired_evaluation": {
+    "model": "mock",
+    "attacker": "static",
+    "attack_mode": "static",
+    "starting_state": "fresh WorldState per scenario and defense"
+  },
+  "live_model": {
+    "model": "qwen/qwen3-8b",
+    "file": "Qwen3-8B-Q4_K_M.gguf",
+    "sha256": "a7676d257b10f3ce23aedba45e64ba61a5aa295f0009d87c5627f6c026a8f35f",
+    "runtime": "LM Studio local API",
+    "identifier": "sentinel-qwen3-8b",
+    "context_tokens": 8192,
+    "max_generation_tokens": 2048,
+    "temperature": 0,
+    "seed": 0
+  },
+  "scorecards": [
+    {"file": "results/public-allow_all.json", "digest": "f967a02a603e8a530350604cb11eaf36bac37712013b87dc82f6dae5f85394c8"},
+    {"file": "results/validation-allow_all.json", "digest": "abdd12f2c8949352fe06d2d1d9c441d30d43214ce574c7321f2ab1e9f52e6c30"},
+    {"file": "results/public-sentinel.json", "digest": "b9387da4ac08f34064769c61c562a788937a61d4b4b7cc09f5dc3804517b0d5f"},
+    {"file": "results/public-sentinel-adaptive-mutation.json", "digest": "00e42f6ceaa1c4bcee4f09532c86743e950274107c543a39b5f3ef2de3dfb7d7"},
+    {"file": "results/validation-sentinel.json", "digest": "cb8791a524e037b9b82c47a98831e37c182e2a9ba586689af3e6111cfd224f3b"},
+    {"file": "results/public-provenance.json", "digest": "13bcc76a4841b4fb2d80effa6f0a472b2b7aa42335dca37c0847a1d472e3f5b4"},
+    {"file": "results/validation-provenance.json", "digest": "fc0393b42c69c6f0859b6d94922f08d230afb6112cc8e4b5a007cea59c88b003"},
+    {"file": "results/public-heuristic_risk.json", "digest": "090802e8f276c7c1b7581a8ae238dee29df1ccc6a80c77549aab57ca8257a18a"},
+    {"file": "results/validation-heuristic_risk.json", "digest": "e55bcb49512d9e31eba1b7098a8f81946150c8dbe94927add22bda60180c2b0f"},
+    {"file": "results/public-sentinel_no_task_g7.json", "digest": "2324b481cbb321a5ebb817336c4c663ee072fb5bb542b27840bd78a98dad082e"},
+    {"file": "results/validation-sentinel_no_task_g7.json", "digest": "c7453e32c2a2b889012b48edf9d07344c68a348ce0b21c5ff6d9736ed7c1294f"},
+    {"file": "results/public-sentinel_whole_context.json", "digest": "b937423f238057578ad9c17890b69acad56b35ae82f551aaae2e694c5c2b216c"},
+    {"file": "results/validation-sentinel_whole_context.json", "digest": "a6ade27968008ba4c1bcc20e64fe8661ab523a3645d43918b0e0046397b8ad95"}
+  ]
+}

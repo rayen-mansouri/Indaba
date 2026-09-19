@@ -6,10 +6,10 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 
 ## Current status
 
-- Active phase: Phase 4 — Evidence, utility, and deliverables
-- Last updated: 2026-09-19 18:19:44 +01:00
-- Phase exit status: Deterministic core and local Qwen3-8B invocation pass; three-domain Qwen evidence remains in progress
-- Current blocker: No runtime blocker. The first correct Qwen3-8B run was semantically correct but missed an exact-string date grader; comparative evidence, viewer, report, and video materials remain to be frozen.
+- Active phase: Phase 5/6 — communicate, reproduce, and submission preparation
+- Last updated: 2026-09-19 18:46:13 +01:00
+- Phase exit status: Deterministic core, paired evidence, adaptive mutation run, local Qwen3-8B traces, viewer, report, declarations, and video runbook are complete; final regression and fresh-clone checks remain.
+- Current blocker: No code/runtime blocker. Actual video recording/upload, official submission URL/timezone confirmation, and submission receipt require the team's external accounts and cannot be fabricated.
 
 ## Entry template
 
@@ -28,6 +28,20 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Scope cut or limitation:** None / describe
 
 ## Entries
+
+### 2026-09-19 18:46:13 +01:00 — Phase 4/5 — Evidence freeze, observability, and report package
+
+- **Purpose:** Convert the tested runtime into an auditable competition deliverable and verify the useful parts of two non-specialist AI reviews against current code/evidence.
+- **Plan requirement(s):** Full published-library comparisons; hard negatives; priority adaptive/long-horizon cases; declared G7 and provenance-propagation ablations; raw denominators and deterministic digests; three composition probes; one trace per domain; observability; technical report; responsible-AI/model-data declarations; video plan.
+- **Files changed:** `evidence/` scorecards/traces/manifest/readme; single-file offline trace viewer and its readme; technical report; responsible-AI statement; model/data declaration; video runbook; README and team handoff.
+- **Commands/tests run:** Six paired public and validation evaluations (`allow_all`, `provenance`, `heuristic_risk`, full SENTINEL, no task-bound G7, whole-context propagation); public adaptive-mutation evaluation; live local Qwen3-8B runs in enterprise, finance, and SOC; deterministic-digest rerun; main pytest (`255 passed, 2 skipped`); starter kits (`6 passed`, `2 passed`); Ruff lint/format; mypy; all eight committed traces through official replay; `node --check` and browser render over the viewer; JSON/manifest validation; official-source verification for AgentSpec DOI, AgentDojo, and MITRE ATLAS release.
+- **Result:** PASS for artifact generation. Full SENTINEL has BTU `1.0`, ASR/CVR/FBR `0.0`, DFI `1.0`, and zero defense errors on public and validation. Public adaptive mutation also has BTU `1.0`, ASR/CVR/FBR/UER `0.0`, and DFI `1.0`. Validation provenance fails encoded exfiltration (ASR `0.25`); whole-context propagation lowers BTU to `0.8`. Two live Qwen benign runs pass; two enterprise traces are safe but fail literal date utility grading and are reported as such.
+- **Run, trace, configuration, or commit ID:** Evidence commit `c05a0b59d2f9b464d2099158ad123f26cc71ba3c`; adaptive digest `00e42f6ceaa1c4bcee4f09532c86743e950274107c543a39b5f3ef2de3dfb7d7`; all scorecard digests in `evidence/manifest.json`; exact Qwen model hash/settings in `docs/model-data-declaration.md`.
+- **Decision:** Keep paired aggregate comparisons on deterministic mock actions so each defense sees identical proposals/start state, and present four Qwen traces separately. Treat risk as deterministic severity with measured Brier/ECE, not learned probability. Use task authorization as explicit out-of-band authority; never infer it from the natural-language goal. Use official replay plus a read-only offline viewer; the Python trace verifier remains authoritative.
+- **Problem observed:** The starter provenance defense looked perfect on public cases but leaked a Base64-protected value on validation. Conservative whole-context propagation caused a benign false block. One attacker-influenced but non-violating draft lowers public TUI to `0.983`. Two Qwen outputs paraphrased exact date strings, and a 768-token Qwen attempt exhausted output before a final action.
+- **Root cause:** Known — provenance-only lacks value-level transformed-payload DLP; whole-context propagation over-taints independent fields; draft authorization permits evidence-bearing text to an already authorized draft destination; the reference model/grader pair is literal-date sensitive; the local runtime exposes reasoning separately within the decode budget.
+- **Resolution or next action:** Preserve paired failure traces, field-aware/value-level controls, exact grader failures, and the 2,048-token local decode configuration. Run final regression/digest reproduction and a fresh-clone check. Then record/upload the video and submit using team-owned external accounts.
+- **Scope cut or limitation:** AgentDojo, Tier-2 intervention, a rich server dashboard, and extended visual polish are cut. Four Qwen traces do not support a full-model aggregate. Two Windows symlink tests still require a symlink-capable host. The viewer's browser checks are advisory, not a replacement for trusted trace verification.
 
 ### 2026-09-19 18:19:44 +01:00 — Phase 1/3/4 — Local Qwen runtime and defense hardening
 

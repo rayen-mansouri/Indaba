@@ -39,9 +39,11 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-latest 2026-09-19 regression result was `235 passed, 2 skipped`; both skips require Windows symlink privilege.
-See [BUILD_LOG.md](BUILD_LOG.md) for the exact commands, trace ID, limitations, and current phase,
-and [docs/TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) for continuation notes.
+latest 2026-09-19 regression result was `255 passed, 2 skipped`; both skips require Windows symlink privilege.
+See [BUILD_LOG.md](BUILD_LOG.md) for exact commands and limitations, the
+[technical report](docs/technical-report.md) for methods/results, the
+[evidence bundle](evidence/README.md) for scorecards and replayable traces, and the
+[offline trace viewer](observability/sentinel-trace-viewer.html) for the observability layer.
 
 The custom defense lives in `src/sentinel/firewall/`. It provides a strict
 versioned ToolSpec manifest for all registered tools, immutable hash-bound policy snapshots,
@@ -62,9 +64,12 @@ deterministic G1–G7 evaluation. Policy-owned rewrites are validated from scrat
 back to the original action. Security events form a digest-linked proposal → decision → approval or
 rewrite → executor receipt → verified-state chain, checked by `verify_digest_linked_trace`.
 
-The latest mock-model diagnostic run covers all 28 shipped scenarios: public ASR `0.0`, BTU `1.0`;
-validation ASR `0.0`, BTU `1.0`, with no task failures. These are reproducible local diagnostics,
-not Qwen3-8B or final competition claims. The reference-model run is still required.
+The frozen mock-model diagnostic covers all 28 shipped scenarios: public and validation ASR `0.0`,
+BTU `1.0`, with no task failures or defense errors. A public adaptive mutation run also has ASR
+`0.0` and BTU `1.0`. Four local Qwen3-8B traces are committed: two successful benign cases in
+finance/SOC, one semantically correct enterprise case rejected by a literal date grader, and one
+enterprise attack trace where SENTINEL blocks the injected tool request. These are reproducible
+local diagnostics, not an official competition score or a full-Qwen aggregate.
 
 ## Architecture
 
@@ -223,6 +228,12 @@ docs/          architecture, guides, threat and security models, scoring, author
 - [Scoring](docs/scoring.md)
 - [Scenario authoring](docs/scenario-authoring.md)
 - [Research report template](docs/research-report-template.md)
+- [Technical report](docs/technical-report.md)
+- [Responsible-AI and security statement](docs/responsible-ai.md)
+- [Model and data declaration](docs/model-data-declaration.md)
+- [Video runbook](docs/video-script.md)
+- [Evidence bundle](evidence/README.md)
+- [Offline observability viewer](observability/sentinel-trace-viewer.html)
 - [Security policy](SECURITY.md)
 
 ## Important dates
