@@ -107,6 +107,8 @@ class GateEvaluator:
         policy: PolicySnapshot,
         approvals: ApprovalStore,
         destinations: DestinationMap,
+        *,
+        enforce_task_destination: bool = True,
     ) -> None:
         if policy.manifest_hash != manifest.manifest_hash:
             raise ValueError("policy snapshot is bound to another ToolSpec manifest")
@@ -114,6 +116,7 @@ class GateEvaluator:
         self.policy = policy
         self.approvals = approvals
         self.destinations = destinations
+        self.enforce_task_destination = enforce_task_destination
 
     def evaluate(self, context: DecisionContext, now: datetime) -> GateEvaluation:
         action = context.candidate.executable
@@ -347,11 +350,13 @@ class GateEvaluator:
             return GateResult(gate=GateName.G7_DESTINATION, applicable=False, passed=True)
         grant = context.task_scope.grant_for(spec.name)
         allowed = grant.destinations if grant else ()
-        mismatched = [
-            destination
-            for destination in context.candidate.canonical_destinations
-            if not _matches_constraint(destination, allowed)
-        ]
+        mismatched = []
+        if self.enforce_task_destination:
+            mismatched = [
+                destination
+                for destination in context.candidate.canonical_destinations
+                if not _matches_constraint(destination, allowed)
+            ]
         passed = (
             spec.name in self.policy.allowed_tools and bool(context.candidate.canonical_destinations) and not mismatched
         )

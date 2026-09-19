@@ -30,7 +30,7 @@ class LMStudioModelAdapter(ModelAdapter):
         self,
         model: str = DEFAULT_LMSTUDIO_MODEL,
         base_url: str = DEFAULT_LMSTUDIO_URL,
-        max_tokens: int = 768,
+        max_tokens: int = 2_048,
         max_context_chars: int = 12_000,
         timeout_s: float = 180.0,
         client: httpx.Client | None = None,

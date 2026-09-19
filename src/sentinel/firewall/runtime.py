@@ -106,7 +106,16 @@ class SentinelFirewallDefense(Defense):
 
     name = "sentinel"
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        name: str = "sentinel",
+        enforce_task_destination: bool = True,
+        field_scoped_provenance: bool = True,
+    ) -> None:
+        self.name = name
+        self._enforce_task_destination = enforce_task_destination
+        self._field_scoped_provenance = field_scoped_provenance
         self._bound = False
         self._manifest: ToolManifest | None = None
         self._policy: PolicySnapshot | None = None
@@ -164,7 +173,13 @@ class SentinelFirewallDefense(Defense):
         self._log = log
         self._graph = ProvenanceGraph(run_id, session_id)
         self._adapters = TrustedActionAdapters(tuple(registry), manifest, destinations)
-        self._evaluator = GateEvaluator(manifest, snapshot, self._approvals, destinations)
+        self._evaluator = GateEvaluator(
+            manifest,
+            snapshot,
+            self._approvals,
+            destinations,
+            enforce_task_destination=self._enforce_task_destination,
+        )
         self._bound = True
 
     # ---- trusted context construction -----------------------------------------------------
@@ -255,6 +270,15 @@ class SentinelFirewallDefense(Defense):
         parent_ids: tuple[str, ...],
     ) -> tuple[ObservedContent, ...]:
         _, _, _, _, graph, _, _ = self._require_bound()
+        if not self._field_scoped_provenance:
+            _, allowed, restricted = self._canary_security(content, DataSensitivity.INTERNAL)
+            node = graph.derive(
+                parent_ids,
+                Transformation.EXTRACT,
+                allowed,
+                destination_restricted=restricted,
+            )
+            return (ObservedContent(content=content, source_node_ids=(node.node_id,)),)
         try:
             parsed = json.loads(content)
         except (json.JSONDecodeError, TypeError):

@@ -19,6 +19,10 @@ BASELINES: dict[str, Callable[[], Defense]] = {
     "heuristic_risk": HeuristicRiskDefense,
     "provenance": ProvenanceDefense,
     "sentinel": SentinelFirewallDefense,
+    "sentinel_no_task_g7": lambda: SentinelFirewallDefense(name="sentinel_no_task_g7", enforce_task_destination=False),
+    "sentinel_whole_context": lambda: SentinelFirewallDefense(
+        name="sentinel_whole_context", field_scoped_provenance=False
+    ),
 }
 
 

@@ -229,6 +229,57 @@ def test_field_scoped_provenance_does_not_taint_unrelated_asset_fields(run_confi
     assert responses and "criticality: high" in responses[-1].payload["content"]
 
 
+def test_whole_context_ablation_reproduces_conservative_overtaint(run_config) -> None:  # type: ignore[no-untyped-def]
+    defense = SentinelFirewallDefense(name="sentinel_whole_context", field_scoped_provenance=False)
+    run = run_scenario(load("soc_val_asset_criticality"), defense, run_config)
+    assert not run.outcome.task_success
+    assert any("DESTINATION_SENSITIVITY_DENIED" in record.reason_codes for record in run.outcome.decisions)
+
+
+def test_no_task_g7_ablation_allows_new_destination_when_other_gates_pass() -> None:
+    authority = TaskAuthorizationSpec.model_validate(
+        {
+            "task_id": "tsk_0123456789abcdef",
+            "principal_id": "enterprise_operator",
+            "role": "operator",
+            "authenticated_by": "offline_simulator_identity",
+            "approval_roles": ["team_lead"],
+            "grants": [
+                {
+                    "tool": "email_draft",
+                    "capabilities": ["draft"],
+                    "destinations": ["legal@atlas.example"],
+                }
+            ],
+        }
+    )
+    scenario = load("enterprise_security_digest")
+    state = WorldState.from_scenario(scenario, ROOT)
+    registry = registry_for_domain(scenario.domain.value)
+    gateway = ToolGateway(registry, state)
+    log = EventLog("run-firewall-test", LogicalClock(1))
+    defense = SentinelFirewallDefense(name="sentinel_no_task_g7", enforce_task_destination=False)
+    defense.bind_run(
+        run_id=log.run_id,
+        task_authorization=authority,
+        policy=load_policy(ROOT, scenario.policy_profile),
+        allowed_tools=("email_draft",),
+        registry=registry,
+        state=state,
+        gateway=gateway,
+        log=log,
+    )
+    action = CandidateAction(
+        type=ActionType.TOOL_CALL,
+        tool="email_draft",
+        arguments={"to": "other@atlas.example", "subject": "Status", "body": "Public status"},
+    )
+
+    decision = defense.decide(_request(action))
+
+    assert decision.decision is Decision.ALLOW
+
+
 def test_memory_is_evidence_only_and_cannot_expand_task_authority(run_config) -> None:  # type: ignore[no-untyped-def]
     run = run_scenario(load("enterprise_memory_poison"), SentinelFirewallDefense(), run_config)
 

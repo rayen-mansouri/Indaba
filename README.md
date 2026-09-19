@@ -130,7 +130,10 @@ lms load qwen/qwen3-8b --identifier sentinel-qwen3-8b --context-length 8192 --gp
 `lmstudio:<identifier>` uses LM Studio only as the inference runtime. It keeps the same Qwen3-8B,
 system prompt, registered tools, argument schemas, and deterministic decode settings. The first live
 run exposed a missing-schema interface bug; both real-model adapters now show the model the strict
-JSON schemas already registered for those same tools.
+JSON schemas already registered for those same tools. The LM Studio adapter uses temperature `0`,
+seed `0`, an 8,192-token loaded context, and a 2,048-token generation budget; the larger budget is
+needed because this runtime returns Qwen's reasoning separately even when only the JSON action is
+parsed and recorded.
 
 Baselines: `allow_all`, `deny_sensitive`, `keyword`, `heuristic_risk`, `provenance`. `--model` selects
 the reference agent's underlying model (`mock` by default, `qwen3-8b` for local Hugging Face
