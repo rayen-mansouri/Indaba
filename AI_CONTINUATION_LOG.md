@@ -44,7 +44,7 @@ logs first. Never delete or rewrite earlier entries. Record only work actually p
 - **Root cause:** Not applicable.
 - **Resolution:** Append the exact commit and remote range to the journal before this metadata commit.
 - **Remaining work or limitation:** External video/submission steps and symlink-capable-host coverage remain as recorded above.
-- **Commit and push:** Pending until this journal-only update passes `git diff --check`.
+- **Commit and push:** Commit `bf01f1b` (`record verification push result`) created after `git diff --check` passed and pushed successfully with `git push origin main` (`3244182..bf01f1b`).
 
 ### 2026-09-19 19:04 +01:00 — Primary agent — Token-limit handoff checkpoint
 
