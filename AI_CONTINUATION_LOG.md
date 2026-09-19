@@ -46,6 +46,19 @@ logs first. Never delete or rewrite earlier entries. Record only work actually p
 - **Remaining work or limitation:** Human must record/upload the video and submit. Two Windows symlink tests need a capable host. Live Qwen evidence is trace-level, not a full aggregate.
 - **Commit and push:** Pending final commit after this entry; record the hash and remote result in the next append-only entry.
 
+### 2026-09-20 00:55 +01:00 — Primary agent — Delivery checkpoint
+
+- **Starting commit:** `adfa936` on `main` after the final implementation/evidence commit.
+- **Purpose:** Record the exact commit and remote result for the completed audit-remediation unit.
+- **Files changed:** `AI_CONTINUATION_LOG.md`, `BUILD_LOG.md` only.
+- **Commands/tests run:** `git diff --cached --check` passed before commit; implementation gate remains `260 passed, 2 skipped`, starter kits `6 passed` and `2 passed`, Ruff/mypy/trace/manifest checks passed. No implementation code changed after those checks.
+- **Result:** PASS — implementation/evidence commit `adfa936` was created and pushed successfully to `origin/main` (`e6b9230..adfa936`).
+- **Problems or bugs:** None in the delivery operation.
+- **Root cause:** Not applicable.
+- **Resolution:** Preserve this append-only record and push a metadata-only checkpoint.
+- **Remaining work or limitation:** Human-owned video/upload/submission and symlink-capable-host coverage only.
+- **Commit and push:** Deliverable commit `adfa936` pushed successfully; this metadata entry is committed immediately afterward.
+
 ### 2026-09-19 19:15 +01:00 — Continuation agent — Fresh-clone verification
 
 - **Starting commit:** `9f5497b` on `main`, also `origin/main`; clean clone `.clean-check` was at grafted `b94318a`.

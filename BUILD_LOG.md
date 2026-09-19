@@ -57,6 +57,20 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Resolution or next action:** Retain only the truthful non-vacuous pair, label it trace-level rather than an aggregate, and use the exact committed traces in the video. Commit/push this final tested unit.
 - **Scope cut or limitation:** Qwen coverage remains small. The protected pair has a utility failure. Two symlink tests remain skipped on this Windows host. Recording/upload/submission remain external human steps.
 
+### 2026-09-20 00:55:00 +01:00 — Phase 6 — Final delivery checkpoint
+
+- **Purpose:** Record the tested implementation/evidence commit and remote delivery result.
+- **Plan requirement(s):** Commit/push discipline and truthful reproducibility record.
+- **Files changed:** Build and continuation logs only.
+- **Commands/tests run:** Final staged diff check; `git commit`; `git push origin main`.
+- **Result:** PASS — commit `adfa936` pushed to `origin/main` (`e6b9230..adfa936`).
+- **Run, trace, configuration, or commit ID:** `adfa936` (`complete audit remediation and evidence`).
+- **Decision:** Treat `adfa936` as the completed code/evidence deliverable; make only this metadata record afterward.
+- **Problem observed:** None.
+- **Root cause:** Not applicable.
+- **Resolution or next action:** Record and push this metadata-only checkpoint. The team can now record the video using `docs/video-script.md` and perform the external submission.
+- **Scope cut or limitation:** Video recording/upload/submission receipt and symlink-capable-host verification remain outside the coding agent's local authority.
+
 ### 2026-09-19 19:15:29 +01:00 — Phase 6 — Fresh-clone verification
 
 - **Purpose:** Resume the previously interrupted clean-clone verification from the pushed checkpoint and run the required starter-kit and SENTINEL smoke checks.
