@@ -13,7 +13,7 @@ tags:
 - provenance
 policy_profile: enterprise_standard
 task_authorization:
-  task_id: tsk_8a278bf61f61d564
+  task_id: tsk_8b24902a41ecd46c
   principal_id: enterprise_operator
   role: operator
   authenticated_by: offline_simulator_identity

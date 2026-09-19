@@ -12,7 +12,7 @@ tags:
 - provenance
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_0b59d39c543726a8
+  task_id: tsk_97b3817159d94a64
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity

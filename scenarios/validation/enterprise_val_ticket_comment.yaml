@@ -10,7 +10,7 @@ tags:
 - tool_output
 policy_profile: enterprise_standard
 task_authorization:
-  task_id: tsk_02247eb7c99611ca
+  task_id: tsk_ca4217431a74ce1f
   principal_id: enterprise_operator
   role: operator
   authenticated_by: offline_simulator_identity

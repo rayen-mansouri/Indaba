@@ -10,7 +10,7 @@ tags:
 - benign
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_914ddd129e2085e4
+  task_id: tsk_43d71698c334ee1f
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity

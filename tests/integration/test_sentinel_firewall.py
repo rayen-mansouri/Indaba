@@ -1,5 +1,6 @@
 import base64
 import codecs
+import json
 from datetime import UTC, datetime
 from urllib.parse import quote
 
@@ -8,9 +9,10 @@ import pytest
 from sentinel.core.actions import ActionType, CandidateAction, Decision
 from sentinel.core.events import EventLog, EventType, LogicalClock
 from sentinel.core.policies import load_policy
+from sentinel.core.provenance import Provenance, Sensitivity, SourceType, TrustLevel
 from sentinel.core.scenario import TaskAuthorizationSpec
 from sentinel.core.state import WorldState
-from sentinel.defenses.interface import ConversationItem, DefenseRequest
+from sentinel.defenses.interface import ConversationItem, DefenseRequest, ProvenanceRecord
 from sentinel.evaluator.runner import run_scenario
 from sentinel.firewall.runtime import SentinelFirewallDefense
 from sentinel.firewall.trace import TraceIntegrityError, verify_digest_linked_trace
@@ -48,14 +50,45 @@ def _bound(
     return defense, state, log
 
 
-def _request(action: CandidateAction, *, content: str = "authenticated task") -> DefenseRequest:
+def _request(
+    action: CandidateAction,
+    *,
+    content: str = "authenticated task",
+    restricted_observation: str | None = None,
+) -> DefenseRequest:
+    conversation = [ConversationItem(role="user", kind="user_message", content=content)]
+    provenance: list[ProvenanceRecord] = []
+    if restricted_observation is not None:
+        provenance.append(
+            ProvenanceRecord(
+                id="prov-sensitive",
+                provenance=Provenance(
+                    source_type=SourceType.ASSET,
+                    source_id="runtime-observed-asset",
+                    trust_level=TrustLevel.TRUSTED_INTERNAL,
+                    origin_actor="asset_inventory",
+                    retrieved_via="asset_lookup",
+                    sensitivity=Sensitivity.RESTRICTED,
+                    timestamp=NOW,
+                ),
+            )
+        )
+        conversation.append(
+            ConversationItem(
+                role="tool",
+                kind="tool_result",
+                content=json.dumps({"service_account_token": restricted_observation}),
+                provenance_ids=["prov-sensitive"],
+            )
+        )
     return DefenseRequest(
         run_id="run-firewall-test",
         step_id=1,
         runtime_timestamp=NOW,
         user_goal=content,
-        conversation=[ConversationItem(role="user", kind="user_message", content=content)],
+        conversation=conversation,
         candidate_action=action,
+        provenance=provenance,
     )
 
 
@@ -135,7 +168,14 @@ def test_sensitive_send_rewrites_to_one_revalidated_redacted_draft() -> None:
         tool="email_send",
         arguments={"to": "vendor@outside.example", "subject": "secret", "body": secret},
     )
-    decision = defense.decide(_request(original, content="Draft a restricted external notice."))
+    state.canaries.canaries.clear()  # evaluator-only registry must not influence the decision
+    decision = defense.decide(
+        _request(
+            original,
+            content="Draft a restricted external notice.",
+            restricted_observation=secret,
+        )
+    )
     assert decision.decision is Decision.REWRITE
     assert decision.rewritten_action is not None and decision.rewritten_action.tool == "email_draft"
     assert secret not in decision.rewritten_action.text_payload()
@@ -182,7 +222,7 @@ def test_encoded_sensitive_payload_is_rewritten_before_external_egress(encode) -
         arguments={"to": "vendor@outside.example", "subject": "encoded", "body": encode(secret)},
     )
 
-    decision = defense.decide(_request(original))
+    decision = defense.decide(_request(original, restricted_observation=secret))
 
     assert decision.decision is Decision.REWRITE
     assert decision.rewritten_action is not None
@@ -217,7 +257,7 @@ def test_failed_rewrite_revalidation_blocks_without_original_fallback() -> None:
         tool="email_send",
         arguments={"to": "vendor@outside.example", "subject": "secret", "body": secret},
     )
-    decision = defense.decide(_request(original))
+    decision = defense.decide(_request(original, restricted_observation=secret))
     assert decision.decision is Decision.BLOCK and decision.rewritten_action is None
     assert state.table("sent_emails") == {} and state.table("drafts") == {}
 

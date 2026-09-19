@@ -175,8 +175,15 @@ def grant(
     return result
 
 
-def authorization(sid: str, domain: str, grants: list[dict[str, Any]]) -> dict[str, Any]:
-    task_id = "tsk_" + hashlib.sha256(f"sentinel-task:{sid}".encode()).hexdigest()[:16]
+def authorization(_fixture_label: str, domain: str, grants: list[dict[str, Any]]) -> dict[str, Any]:
+    # The opaque runtime task ID is bound to the authenticated authorization
+    # envelope, not to a scenario/evaluator identifier.
+    task_material = json.dumps(
+        {"domain": domain, "principal_id": f"{domain}_operator", "grants": grants},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    task_id = "tsk_" + hashlib.sha256(b"sentinel-task-envelope:v1:" + task_material).hexdigest()[:16]
     approval_roles = {
         "enterprise": ["team_lead"],
         "finance": ["officer"],

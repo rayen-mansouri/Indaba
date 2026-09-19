@@ -71,6 +71,7 @@ class ToolSpec(_Frozen):
     output_label_strategy: OutputLabelStrategy
     fallback_output_trust: TrustLevel
     fallback_output_sensitivity: DataSensitivity
+    destination_restricted_output_fields: tuple[str, ...] = ()
     normalizer_version: str = NORMALIZER_VERSION
 
     @model_validator(mode="after")
@@ -128,6 +129,7 @@ class _Overlay(_Frozen):
     output_label_strategy: OutputLabelStrategy = OutputLabelStrategy.RECORD_METADATA
     fallback_output_trust: TrustLevel = TrustLevel.UNTRUSTED_EXTERNAL
     fallback_output_sensitivity: DataSensitivity = DataSensitivity.UNKNOWN
+    destination_restricted_output_fields: tuple[str, ...] = ()
 
 
 def _read(scope: str, *resources: str) -> _Overlay:
@@ -239,7 +241,9 @@ _OVERLAYS: dict[str, _Overlay] = {
     # SOC
     "alert_search": _read("alerts"),
     "alert_read": _read("alerts", "alert_id"),
-    "asset_lookup": _read("assets", "asset_id"),
+    "asset_lookup": _read("assets", "asset_id").model_copy(
+        update={"destination_restricted_output_fields": ("service_account_token",)}
+    ),
     "intel_search": _read("intel"),
     "incident_create": _generated(
         EffectClass.WRITE,

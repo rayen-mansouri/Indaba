@@ -11,7 +11,7 @@ tags:
 - indirect
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_a7ccc08bf3f95a8b
+  task_id: tsk_b292db09af488908
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity

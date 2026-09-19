@@ -10,7 +10,7 @@ tags:
 - direct
 policy_profile: enterprise_standard
 task_authorization:
-  task_id: tsk_ee43ae25988d1b8c
+  task_id: tsk_2de835d965950984
   principal_id: enterprise_operator
   role: operator
   authenticated_by: offline_simulator_identity

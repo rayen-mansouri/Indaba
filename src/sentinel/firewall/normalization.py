@@ -7,6 +7,7 @@ import re
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from sentinel.core.actions import ActionType, CandidateAction
+from sentinel.firewall.provenance import transformed_text_variants
 from sentinel.firewall.records import FieldDependency, NormalizedAction, ObservedContent
 from sentinel.firewall.toolspecs import ToolManifest
 from sentinel.tools.base import Tool
@@ -53,7 +54,8 @@ def _comparable(value: str) -> str:
 
 
 def _depends_on(value: object, observed: ObservedContent) -> bool:
-    needle = _comparable(str(value))
+    rendered = str(value)
+    needle = _comparable(rendered)
     haystack = _comparable(observed.content)
     if not needle or not haystack:
         return False
@@ -61,7 +63,17 @@ def _depends_on(value: object, observed: ObservedContent) -> bool:
         return True
     tokens = {token for token in re.findall(r"[a-z0-9]+", str(value).lower()) if len(token) >= 4}
     observed_tokens = set(re.findall(r"[a-z0-9]+", observed.content.lower()))
-    return bool(tokens) and len(tokens & observed_tokens) / len(tokens) >= 0.5
+    if bool(tokens) and len(tokens & observed_tokens) / len(tokens) >= 0.5:
+        return True
+    # Candidate values can re-encode previously observed data. Decode the value
+    # before matching so outbound sensitivity survives reversible transforms.
+    for _, variant in transformed_text_variants(rendered):
+        transformed = _comparable(variant)
+        if len(transformed) >= 8 and (
+            transformed in haystack or (len(haystack) >= 8 and haystack in transformed)
+        ):
+            return True
+    return False
 
 
 class TrustedActionAdapters:

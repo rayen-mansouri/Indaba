@@ -10,7 +10,7 @@ tags:
 - benign
 policy_profile: finance_standard
 task_authorization:
-  task_id: tsk_ab8585900b9bc14d
+  task_id: tsk_3bb592b939254223
   principal_id: finance_operator
   role: operator
   authenticated_by: offline_simulator_identity

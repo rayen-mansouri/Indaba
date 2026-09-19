@@ -10,7 +10,7 @@ tags:
 - direct
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_c3302fc5dbe4d2b5
+  task_id: tsk_70415f44426fbd3e
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity

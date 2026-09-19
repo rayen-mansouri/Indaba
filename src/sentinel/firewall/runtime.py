@@ -23,7 +23,7 @@ from sentinel.firewall.normalization import (
     TrustedActionAdapters,
 )
 from sentinel.firewall.policy import PolicySnapshot
-from sentinel.firewall.provenance import ProvenanceGraph, contains_transformed_value, derive_observed_variants
+from sentinel.firewall.provenance import ProvenanceGraph, derive_observed_variants
 from sentinel.firewall.records import (
     AuthenticatedPrincipal,
     CapabilityGrant,
@@ -129,6 +129,7 @@ class SentinelFirewallDefense(Defense):
         self._evaluator: GateEvaluator | None = None
         self._approvals = ApprovalStore()
         self._source_ids: dict[str, str] = {}
+        self._source_egress: dict[str, tuple[tuple[TrustLevel, ...], bool, tuple[str, ...]]] = {}
         self._observed_by_step: dict[int, tuple[ObservedContent, ...]] = {}
         self._decision_actions: dict[int, set[str]] = {}
         self._traced_actions: set[tuple[str, int]] = set()
@@ -213,20 +214,20 @@ class SentinelFirewallDefense(Defense):
             self._evaluator,
         )
 
-    def _canary_security(
-        self, text: str, default: DataSensitivity
-    ) -> tuple[DataSensitivity, tuple[TrustLevel, ...], bool]:
-        assert self._state is not None
-        matches = [canary for canary in self._state.canaries if contains_transformed_value(text, canary.value)]
-        if not matches:
-            return default, (), False
-        sensitivity = max(
-            [default, *(_data_sensitivity(canary.sensitivity) for canary in matches)],
-            key=lambda item: item.rank,
-        )
-        allowed_sets = [set(canary.allowed_destinations) for canary in matches]
-        allowed = set.intersection(*allowed_sets) if allowed_sets else set()
-        return sensitivity, tuple(sorted(allowed, key=lambda item: item.rank)), True
+    @staticmethod
+    def _egress_restrictions(
+        sensitivity: DataSensitivity,
+    ) -> tuple[tuple[TrustLevel, ...], bool]:
+        """Translate runtime provenance labels into policy-owned egress constraints.
+
+        Evaluator canary registries and expected destinations are deliberately absent
+        from this mapping and from the decision path.
+        """
+        if sensitivity is DataSensitivity.RESTRICTED:
+            return (), True
+        if sensitivity is DataSensitivity.CONFIDENTIAL:
+            return (TrustLevel.AUTHENTICATED_USER, TrustLevel.TRUSTED_INTERNAL), True
+        return (), False
 
     def _import_provenance(self, request: DefenseRequest) -> None:
         _, _, _, _, graph, _, _ = self._require_bound()
@@ -234,11 +235,35 @@ class SentinelFirewallDefense(Defense):
             if record.id in self._source_ids:
                 continue
             default = _data_sensitivity(record.provenance.sensitivity)
+            allowed, restricted = self._egress_restrictions(default)
+            spec = self._manifest.get(record.provenance.retrieved_via) if self._manifest else None
+            restricted_fields = spec.destination_restricted_output_fields if spec is not None else ()
             node = graph.import_provenance(
                 record.provenance,
                 sensitivity=default,
             )
             self._source_ids[record.id] = node.node_id
+            self._source_egress[node.node_id] = (allowed, restricted, restricted_fields)
+
+    def _field_egress(
+        self,
+        parent_ids: tuple[str, ...],
+        path: str | None,
+    ) -> tuple[tuple[TrustLevel, ...], bool]:
+        policies = [self._source_egress[parent_id] for parent_id in parent_ids if parent_id in self._source_egress]
+        allowed_sets: list[set[TrustLevel]] = []
+        restricted = False
+        for allowed, source_restricted, restricted_fields in policies:
+            applies = source_restricted and (
+                not restricted_fields or path is None or path.rsplit(".", 1)[-1] in restricted_fields
+            )
+            if applies:
+                restricted = True
+                allowed_sets.append(set(allowed))
+        if not restricted:
+            return (), False
+        effective_allowed = set.intersection(*allowed_sets) if allowed_sets else set()
+        return tuple(sorted(effective_allowed, key=lambda item: item.rank)), True
 
     @staticmethod
     def _fallback_source(item: ConversationItem) -> tuple[TrustLevel, DataSensitivity, bool]:
@@ -271,7 +296,7 @@ class SentinelFirewallDefense(Defense):
     ) -> tuple[ObservedContent, ...]:
         _, _, _, _, graph, _, _ = self._require_bound()
         if not self._field_scoped_provenance:
-            _, allowed, restricted = self._canary_security(content, DataSensitivity.INTERNAL)
+            allowed, restricted = self._field_egress(parent_ids, None)
             node = graph.derive(
                 parent_ids,
                 Transformation.EXTRACT,
@@ -285,7 +310,7 @@ class SentinelFirewallDefense(Defense):
             parsed = None
         fields = self._structured_fields(parsed) if isinstance(parsed, dict | list) else []
         if not fields:
-            _, allowed, restricted = self._canary_security(content, DataSensitivity.INTERNAL)
+            allowed, restricted = self._field_egress(parent_ids, None)
             if not restricted:
                 return (ObservedContent(content=content, source_node_ids=parent_ids),)
             node = graph.derive(
@@ -297,15 +322,14 @@ class SentinelFirewallDefense(Defense):
             return (ObservedContent(content=content, source_node_ids=(node.node_id,)),)
         observed: list[ObservedContent] = []
         for path, value in fields:
-            field_content = f"{path}: {value}"
-            _, allowed, restricted = self._canary_security(field_content, DataSensitivity.INTERNAL)
+            allowed, restricted = self._field_egress(parent_ids, path)
             node = graph.derive(
                 parent_ids,
                 Transformation.EXTRACT,
                 allowed,
                 destination_restricted=restricted,
             )
-            observed.append(ObservedContent(content=field_content, source_node_ids=(node.node_id,)))
+            observed.append(ObservedContent(content=value, source_node_ids=(node.node_id,)))
         return tuple(observed)
 
     def _observed(self, request: DefenseRequest) -> tuple[ObservedContent, ...]:
@@ -349,13 +373,10 @@ class SentinelFirewallDefense(Defense):
     def _candidate_observed(self, action: CandidateAction) -> ObservedContent:
         _, _, _, _, graph, _, _ = self._require_bound()
         text = action.text_payload()
-        sensitivity, allowed, restricted = self._canary_security(text, DataSensitivity.INTERNAL)
         node = graph.add_source(
             "candidate_payload",
             TrustLevel.ADVERSARY_CONTROLLED,
-            sensitivity,
-            allowed,
-            destination_restricted=restricted,
+            DataSensitivity.INTERNAL,
         )
         return ObservedContent(content=text, source_node_ids=(node.node_id,))
 

@@ -10,7 +10,7 @@ tags:
 - direct
 policy_profile: finance_standard
 task_authorization:
-  task_id: tsk_f1a214d897af8e7e
+  task_id: tsk_c214a07519fb8c47
   principal_id: finance_operator
   role: operator
   authenticated_by: offline_simulator_identity

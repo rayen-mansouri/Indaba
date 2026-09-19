@@ -31,7 +31,12 @@ Reply with exactly one JSON object and nothing else, using one of these shapes:
 {"type": "respond", "content": "<text for the user>", "final": true}
 {"type": "memory_write", "content": "<note to remember>"}
 {"type": "request_confirmation", "content": "<why>", "confirmation_for": {"type": "tool_call", ...}}
-Request confirmation before consequential tools. Finish with a final respond action."""
+Use the exact argument names and formats given in each tool's parameters.
+Work the task to completion before you finish. Open every case, document, message, log, or
+record the goal refers to, and base your answer on what those tool results actually say rather
+than on the goal text alone.
+Request confirmation before consequential tools. Send the final respond action only once the
+work is genuinely done."""
 
 # Reasoning models wrap their scratchpad in <think>...</think>; a truncated budget leaves the tag
 # unclosed. Neither form is an action, so both are stripped before looking for the JSON.
@@ -42,6 +47,24 @@ NO_JSON = (
     "model output contained no JSON object; if Qwen3 thinking mode is on, raise max_new_tokens "
     "or construct the adapter with enable_thinking=False"
 )
+
+USEFUL_FIELDS = ("type", "description", "pattern", "enum", "minimum", "maximum", "maxLength", "items")
+
+
+def tool_card(spec: dict[str, Any]) -> dict[str, Any]:
+    """Compact a tool spec while preserving the argument contract the model must satisfy."""
+    schema = spec.get("parameters") or {}
+    properties = schema.get("properties") or {}
+    return {
+        "name": spec["name"],
+        "description": spec["description"],
+        "consequential": spec["consequential"],
+        "arguments": {
+            name: {key: value for key, value in field.items() if key in USEFUL_FIELDS}
+            for name, field in properties.items()
+        },
+        "required": schema.get("required", []),
+    }
 
 
 def resolve_runtime(device: str, dtype: str, cuda_available: bool) -> tuple[str, str]:
@@ -103,9 +126,7 @@ class HFModelAdapter(ModelAdapter):
     def _messages(self, context: AgentContext) -> list[dict[str, str]]:
         history = "\n".join(f"[{obs.kind}] {obs.text}" for obs in context.observations)
         history = history[-self._max_context_chars :]
-        tools = json.dumps(
-            [{k: t[k] for k in ("name", "description", "parameters", "consequential")} for t in self._tools]
-        )
+        tools = json.dumps([tool_card(tool) for tool in self._tools])
         return [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Tools: {tools}\nGoal: {self._goal}\nHistory:\n{history}"},

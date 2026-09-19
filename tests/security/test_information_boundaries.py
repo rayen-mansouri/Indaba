@@ -26,6 +26,11 @@ HIDDEN_KEYS = {
 }
 
 
+def test_firewall_decision_code_does_not_read_evaluator_canary_registry() -> None:
+    runtime = (ROOT / "src" / "sentinel" / "firewall" / "runtime.py").read_text(encoding="utf-8")
+    assert ".canaries" not in runtime
+
+
 class Capture(Defense):
     name = "capture"
 

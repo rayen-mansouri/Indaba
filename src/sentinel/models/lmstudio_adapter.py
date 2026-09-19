@@ -15,7 +15,7 @@ import httpx
 from sentinel.agent.base import AgentContext, Feedback
 from sentinel.core.actions import CandidateAction
 from sentinel.models.base import ModelAdapter, ModelError, TurnHints
-from sentinel.models.hf_adapter import SYSTEM_PROMPT, parse_action
+from sentinel.models.hf_adapter import SYSTEM_PROMPT, parse_action, tool_card
 
 DEFAULT_LMSTUDIO_MODEL = "sentinel-qwen3-8b"
 DEFAULT_LMSTUDIO_URL = "http://127.0.0.1:1234/v1"
@@ -51,9 +51,7 @@ class LMStudioModelAdapter(ModelAdapter):
     def _messages(self, context: AgentContext) -> list[dict[str, str]]:
         history = "\n".join(f"[{obs.kind}] {obs.text}" for obs in context.observations)
         history = history[-self._max_context_chars :]
-        tools = json.dumps(
-            [{k: tool[k] for k in ("name", "description", "parameters", "consequential")} for tool in self._tools]
-        )
+        tools = json.dumps([tool_card(tool) for tool in self._tools])
         return [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Tools: {tools}\nGoal: {self._goal}\nHistory:\n{history}"},

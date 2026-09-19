@@ -11,7 +11,7 @@ tags:
 - consequential
 policy_profile: finance_standard
 task_authorization:
-  task_id: tsk_6f7b71e8b45c08ef
+  task_id: tsk_5d1eca42a0ab0edd
   principal_id: finance_operator
   role: operator
   authenticated_by: offline_simulator_identity

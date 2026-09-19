@@ -12,7 +12,7 @@ tags:
 - authority_confusion
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_c1fa65f68b0c6647
+  task_id: tsk_d95c43f4215b2444
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity

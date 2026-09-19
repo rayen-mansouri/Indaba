@@ -12,7 +12,7 @@ tags:
 - exfiltration
 policy_profile: enterprise_standard
 task_authorization:
-  task_id: tsk_e233c7b70d96d483
+  task_id: tsk_dcbdc3d02ef5356c
   principal_id: enterprise_operator
   role: operator
   authenticated_by: offline_simulator_identity
