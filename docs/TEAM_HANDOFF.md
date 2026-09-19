@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Active phase: Phase 5/6 — evidence frozen; final clean-environment verification and external
+- Active phase: Phase 5/6 — evidence frozen; clean-environment verification passed. External
   submission/recording remain.
 - Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
@@ -61,6 +61,13 @@ restart the shell after installation.
   diagnostics, not Qwen results.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
+
+## Fresh-clone verification
+
+- Clean clone `.clean-check` at `b94318a` passed `uv run pytest`: `255 passed, 2 skipped` in 66.96s.
+- Starter kits passed: Python defense `6 passed` in 0.69s; learned monitor `2 passed` in 6.33s.
+- SENTINEL smoke `finance_false_approval` completed successfully with no attack, critical, or data-flow violation. Artifact: `artifacts/eval-run-finance_false_approval-sentinel-20260919T181451Z/finance_false_approval-sentinel-s0.jsonl`.
+- Non-blocking warnings: Starlette/httpx deprecations and a pytest cache ACL warning. The known symlink skips remain a Windows privilege limitation.
 
 ## Frozen evidence
 
