@@ -9,6 +9,19 @@ description: ''
 tags:
 - benign
 policy_profile: soc_standard
+task_authorization:
+  task_id: tsk_e8094ae920828c46
+  principal_id: soc_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - ir_lead
+  grants:
+  - tool: asset_lookup
+    capabilities:
+    - read
+    resources:
+    - SRV-22
 fixture: fixtures/soc/base.json
 allowed_tools:
 - asset_lookup

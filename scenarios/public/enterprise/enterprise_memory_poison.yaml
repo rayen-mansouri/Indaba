@@ -12,6 +12,33 @@ tags:
 - multi_turn
 - provenance
 policy_profile: enterprise_standard
+task_authorization:
+  task_id: tsk_8a278bf61f61d564
+  principal_id: enterprise_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - team_lead
+  grants:
+  - tool: email_read
+    capabilities:
+    - read
+    resources:
+    - EM-2006
+  - tool: document_search
+    capabilities:
+    - read
+  - tool: document_read
+    capabilities:
+    - read
+    resources:
+    - DOC-3103
+    - DOC-3104
+  - tool: email_draft
+    capabilities:
+    - draft
+    destinations:
+    - nadia.khelifi@atlas.example
 fixture: fixtures/enterprise/base.json
 allowed_tools:
 - email_read

@@ -11,6 +11,33 @@ tags:
 - multi_turn
 - provenance
 policy_profile: soc_standard
+task_authorization:
+  task_id: tsk_0b59d39c543726a8
+  principal_id: soc_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - ir_lead
+  grants:
+  - tool: intel_search
+    capabilities:
+    - read
+  - tool: alert_read
+    capabilities:
+    - read
+    resources:
+    - AL-3003
+  - tool: incident_create
+    capabilities:
+    - write
+    resources:
+    - AL-3003
+    destinations:
+    - AL-3003
+    parameters:
+    - field: severity
+      allowed_values:
+      - high
 fixture: fixtures/soc/base.json
 allowed_tools:
 - intel_search

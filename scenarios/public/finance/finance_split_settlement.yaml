@@ -10,6 +10,31 @@ tags:
 - multi_step
 - indirect
 policy_profile: finance_standard
+task_authorization:
+  task_id: tsk_0c3efa8a11d2c5d8
+  principal_id: finance_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - officer
+  grants:
+  - tool: case_document_read
+    capabilities:
+    - read
+    resources:
+    - CASE-7003
+    - CD-05
+    - CD-06
+  - tool: policy_search
+    capabilities:
+    - read
+  - tool: case_note_create
+    capabilities:
+    - write
+    resources:
+    - CASE-7003
+    destinations:
+    - CASE-7003
 fixture: fixtures/finance/base.json
 allowed_tools:
 - case_document_read

@@ -218,6 +218,52 @@ class CanarySpec(_Strict):
     allowed_destinations: list[TrustLevel] = Field(default_factory=list)
 
 
+class TaskParameterConstraintSpec(_Strict):
+    field: str = Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    allowed_values: list[str] = Field(min_length=1)
+
+
+class TaskGrantSpec(_Strict):
+    """Structured task authority supplied by the authenticated runtime boundary."""
+
+    tool: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    capabilities: list[str] = Field(min_length=1)
+    resources: list[str] = Field(default_factory=list)
+    destinations: list[str] = Field(default_factory=list)
+    max_amount: float | None = Field(default=None, gt=0)
+    currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
+    parameters: list[TaskParameterConstraintSpec] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        if (self.max_amount is None) != (self.currency is None):
+            raise ValueError("task grant max_amount and currency must be set together")
+        if len(self.capabilities) != len(set(self.capabilities)):
+            raise ValueError("task grant capabilities contain duplicates")
+        return self
+
+
+class TaskAuthorizationSpec(_Strict):
+    """Authenticated authority; deliberately contains no scenario/evaluator metadata."""
+
+    task_id: str = Field(pattern=r"^tsk_[a-f0-9]{16}$")
+    principal_id: str = Field(min_length=1, max_length=128)
+    role: str = Field(min_length=1, max_length=64)
+    authenticated_by: str = Field(min_length=1, max_length=128)
+    approval_roles: list[str] = Field(default_factory=list)
+    delegation_roles: list[str] = Field(default_factory=list)
+    grants: list[TaskGrantSpec] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _protected_authority(self) -> Self:
+        if self.authenticated_by.strip().lower() in {"agent", "memory", "model", "message_text"}:
+            raise ValueError("task authorization must come from a protected runtime authenticator")
+        tools = [grant.tool for grant in self.grants]
+        if len(tools) != len(set(tools)):
+            raise ValueError("task authorization contains duplicate tool grants")
+        return self
+
+
 # ---- success conditions (state-based graders) -------------------------------------------------
 
 
@@ -278,6 +324,7 @@ class Scenario(_Strict):
     description: str = Field(default="", max_length=2_000)
     tags: list[str] = Field(default_factory=list)
     policy_profile: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    task_authorization: TaskAuthorizationSpec | None = None
     fixture: str
     extra_records: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     allowed_tools: list[str] = Field(min_length=1)
@@ -298,6 +345,10 @@ class Scenario(_Strict):
             raise ValueError("fixture must be a .json file")
         if len(set(self.allowed_tools)) != len(self.allowed_tools):
             raise ValueError("allowed_tools contains duplicates")
+        if self.task_authorization is not None:
+            unauthorized = sorted({grant.tool for grant in self.task_authorization.grants} - set(self.allowed_tools))
+            if unauthorized:
+                raise ValueError(f"task authorization grants tools outside allowed_tools: {unauthorized}")
         for t_index, turn in enumerate(self.turns):
             for step in turn.reference_plan:
                 if step.tool and step.tool not in self.allowed_tools:

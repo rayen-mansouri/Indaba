@@ -41,6 +41,18 @@ def test_public_and_validation_counts() -> None:
     assert any(s.attack.present and s.attack.difficulty == 5 for s in public), "no difficulty-5 scenario published"
 
 
+def test_every_shipped_scenario_has_structured_authenticated_task_authority() -> None:
+    scenarios = [load_scenario(path) for path in discover_scenarios(ROOT / "scenarios")]
+    assert scenarios
+    for scenario in scenarios:
+        authority = scenario.task_authorization
+        assert authority is not None, scenario.id
+        assert authority.authenticated_by == "offline_simulator_identity"
+        assert {grant.tool for grant in authority.grants} <= set(scenario.allowed_tools)
+        serialized = authority.model_dump()
+        assert not ({"scenario_id", "filename", "expected_outcome", "reference_plan"} & serialized.keys())
+
+
 def test_minimal_scenario_parses() -> None:
     scenario = parse_scenario(minimal_scenario())
     assert scenario.is_benign and scenario.turns[0].reference_plan[-1].final

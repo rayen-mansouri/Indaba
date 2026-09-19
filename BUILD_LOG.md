@@ -7,9 +7,9 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 ## Current status
 
 - Active phase: Phase 1 — Contract and foundation
-- Last updated: 2026-09-19 14:14:43 +01:00
+- Last updated: 2026-09-19 14:22:59 +01:00
 - Phase exit status: In progress
-- Current blocker: The mock-model contract is verified; the reference Qwen3-8B run and custom deterministic foundation are not yet complete.
+- Current blocker: The mock-model contract and deterministic core are verified; guarded live execution, rewrite/trace integration, and the reference Qwen3-8B run remain open.
 
 ## Entry template
 
@@ -98,3 +98,17 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Root cause:** Known — canonicalization order and treating all destinations as email-like strings.
 - **Resolution or next action:** Canonicalize only declared destination fields before validation, using explicit trusted aliases; preserve case for non-email typed identifiers. Next bind the core to a run-owned task scope and guarded executor, then add rewrite revalidation and digest-linked trace events.
 - **Scope cut or limitation:** G1–G7 and the approval store are not yet on the live agent execution path. Decoding covers plain input plus Base64, hex, URL encoding, ROT13, reversal, whitespace joining, and split concatenation; optional compressed synthetic variants remain deferred until official end-to-end coverage is reproducible.
+
+### 2026-09-19 14:22:59 +01:00 — Phase 1/2 — Authenticated task authority fixtures
+
+- **Purpose:** Give every shipped run an explicit authenticated authority object without letting the defense infer authority from user/model text or evaluator plans.
+- **Plan requirement(s):** Structured authenticated principal, capability/resource/destination/amount/parameter grants, approval roles, and structural separation from scenario identity and expected outcomes.
+- **Files changed:** `src/sentinel/core/scenario.py`; `scenarios/schemas/scenario.schema.json`; all 28 shipped scenario YAML files; `scripts/generate_public_scenarios.py`; `tests/unit/test_scenario.py`; documentation.
+- **Commands/tests run:** Public/validation scenario regeneration; `sentinel scenarios validate scenarios --json`; focused scenario and CLI tests; full pytest; Ruff lint/format; mypy; Python compile check.
+- **Result:** PASS — all 28 scenarios validate; 22 focused tests pass; full suite `224 passed, 2 skipped`; Ruff and mypy pass across 73 source files.
+- **Run, trace, configuration, or commit ID:** Opaque task IDs are deterministic authoring artifacts only; no scenario identifier enters the task-authorization record. Commit pending at entry time.
+- **Decision:** Treat the new `task_authorization` block as runtime-authenticated input. Each grant is explicit per tool and may constrain resources, destinations, amounts/currency, and selected parameters. Keep it separate from attack metadata, reference plans, graders, and labels.
+- **Problem observed:** The published generator owns 27 scenarios; the difficulty-5 dormant-supplier scenario is intentionally hand-authored and therefore did not receive the generated field.
+- **Root cause:** Known — the long-horizon scenario is explicitly excluded from the generator.
+- **Resolution or next action:** Added and tested the same typed authorization block directly to the hand-authored scenario. Next bind this object to the firewall runtime and refuse live SENTINEL runs that do not supply it.
+- **Scope cut or limitation:** The schema leaves task authorization optional for backward-compatible third-party scenario parsing. The SENTINEL runtime will fail closed when it is absent; other baseline defenses remain runnable against legacy scenarios.

@@ -7,8 +7,9 @@
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
 - Phase exit: open. ToolSpecs, normalization, provenance transformations, approvals, and isolated
-  G1–G7 evaluation are complete; Qwen3-8B, guarded execution, rewrites, trace continuity, and
-  end-to-end outcome paths remain open.
+  G1–G7 evaluation are complete. All 28 shipped scenarios now carry explicit authenticated task
+  grants. Qwen3-8B, guarded execution, rewrites, trace continuity, and end-to-end outcome paths
+  remain open.
 
 ## Verified setup and commands
 
@@ -41,7 +42,7 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Main suite: `223 passed, 2 skipped`.
+- Main suite: `224 passed, 2 skipped`.
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
@@ -49,6 +50,8 @@ restart the shell after installation.
 - mypy: pass, 65 source files.
 - Firewall foundation: 8 focused tests pass; Ruff and mypy pass across 69 source files.
 - Firewall core: 33 focused tests pass; Ruff passes; mypy passes across 73 source files.
+- Task-authority fixture unit: all 28 scenarios validate; 22 focused scenario/CLI tests pass; full
+  suite `224 passed, 2 skipped`; Ruff and mypy pass.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
 
@@ -63,6 +66,10 @@ restart the shell after installation.
   compatibility.
 - Approval must be task/action/policy/state/version/expiry bound and consumed once.
 - Rewrites are policy-owned replacements, revalidated from scratch, with no fallback.
+- `Scenario.task_authorization` is runtime authority; scenario identity, attack metadata, reference
+  plans, and graders remain outside every firewall decision/policy API. SENTINEL must fail closed if
+  the authorization block is absent even though the general scenario parser keeps it optional for
+  compatibility.
 
 ## Next safe feature unit
 

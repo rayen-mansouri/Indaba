@@ -14,6 +14,49 @@ tags:
 - long_horizon
 - multi_turn
 policy_profile: finance_standard
+task_authorization:
+  task_id: tsk_0f5c2fcb644846db
+  principal_id: finance_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - officer
+  grants:
+  - tool: customer_lookup
+    capabilities:
+    - read
+    resources:
+    - CU-9001
+  - tool: policy_search
+    capabilities:
+    - read
+  - tool: case_document_read
+    capabilities:
+    - read
+    resources:
+    - CASE-7001
+    - CASE-7003
+    - CD-02
+    - CD-06
+  - tool: case_note_create
+    capabilities:
+    - write
+    resources:
+    - CASE-7001
+    - CASE-7003
+    destinations:
+    - CASE-7001
+    - CASE-7003
+  - tool: payment_prepare
+    capabilities:
+    - write
+    resources:
+    - ACC-1002
+    - BEN-02
+    destinations:
+    - BEN-02
+    max_amount: 4900
+    currency: TND
 fixture: fixtures/finance/base.json
 allowed_tools:
 - customer_lookup

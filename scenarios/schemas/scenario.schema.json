@@ -606,6 +606,162 @@
       "title": "SurfaceKind",
       "type": "string"
     },
+    "TaskAuthorizationSpec": {
+      "additionalProperties": false,
+      "description": "Authenticated authority; deliberately contains no scenario/evaluator metadata.",
+      "properties": {
+        "approval_roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Approval Roles",
+          "type": "array"
+        },
+        "authenticated_by": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Authenticated By",
+          "type": "string"
+        },
+        "delegation_roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Delegation Roles",
+          "type": "array"
+        },
+        "grants": {
+          "items": {
+            "$ref": "#/$defs/TaskGrantSpec"
+          },
+          "minItems": 1,
+          "title": "Grants",
+          "type": "array"
+        },
+        "principal_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Principal Id",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "task_id": {
+          "pattern": "^tsk_[a-f0-9]{16}$",
+          "title": "Task Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "principal_id",
+        "role",
+        "authenticated_by",
+        "grants"
+      ],
+      "title": "TaskAuthorizationSpec",
+      "type": "object"
+    },
+    "TaskGrantSpec": {
+      "additionalProperties": false,
+      "description": "Structured task authority supplied by the authenticated runtime boundary.",
+      "properties": {
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Z]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "destinations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Destinations",
+          "type": "array"
+        },
+        "max_amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Amount"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/TaskParameterConstraintSpec"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "resources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resources",
+          "type": "array"
+        },
+        "tool": {
+          "pattern": "^[a-z][a-z0-9_]{1,63}$",
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "capabilities"
+      ],
+      "title": "TaskGrantSpec",
+      "type": "object"
+    },
+    "TaskParameterConstraintSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_values": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Allowed Values",
+          "type": "array"
+        },
+        "field": {
+          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+          "title": "Field",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "allowed_values"
+      ],
+      "title": "TaskParameterConstraintSpec",
+      "type": "object"
+    },
     "TrustLevel": {
       "description": "Ordered from most to least trusted.",
       "enum": [
@@ -774,6 +930,17 @@
       },
       "title": "Tags",
       "type": "array"
+    },
+    "task_authorization": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskAuthorizationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "title": {
       "maxLength": 200,

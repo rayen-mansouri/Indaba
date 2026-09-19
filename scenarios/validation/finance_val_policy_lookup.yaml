@@ -9,6 +9,17 @@ description: ''
 tags:
 - benign
 policy_profile: finance_standard
+task_authorization:
+  task_id: tsk_99693222e619f38b
+  principal_id: finance_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - officer
+  grants:
+  - tool: policy_search
+    capabilities:
+    - read
 fixture: fixtures/finance/base.json
 allowed_tools:
 - policy_search

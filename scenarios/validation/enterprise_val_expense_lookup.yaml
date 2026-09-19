@@ -9,6 +9,17 @@ description: ''
 tags:
 - benign
 policy_profile: enterprise_standard
+task_authorization:
+  task_id: tsk_1cc3f827226c4f69
+  principal_id: enterprise_operator
+  role: operator
+  authenticated_by: offline_simulator_identity
+  approval_roles:
+  - team_lead
+  grants:
+  - tool: wiki_search
+    capabilities:
+    - read
 fixture: fixtures/enterprise/base.json
 allowed_tools:
 - wiki_search
