@@ -7,9 +7,9 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 ## Current status
 
 - Active phase: Phase 5/6 — communicate, reproduce, and submission preparation
-- Last updated: 2026-09-19 18:46:13 +01:00
-- Phase exit status: Deterministic core, paired evidence, adaptive mutation run, local Qwen3-8B traces, viewer, report, declarations, and video runbook are complete; final regression and fresh-clone checks remain.
-- Current blocker: No code/runtime blocker. Actual video recording/upload, official submission URL/timezone confirmation, and submission receipt require the team's external accounts and cannot be fabricated.
+- Last updated: 2026-09-19 19:04:00 +01:00
+- Phase exit status: Deterministic core, paired evidence, adaptive mutation run, local Qwen3-8B traces, viewer, report, declarations, and video runbook are complete. Working-tree final regression passed; fresh-clone dependency sync passed but its full test was user-interrupted and remains unverified.
+- Current blocker: Work paused at the user's token-limit request. Actual video recording/upload, official submission URL/timezone confirmation, and submission receipt require the team's external accounts and cannot be fabricated.
 
 ## Entry template
 
@@ -28,6 +28,20 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Scope cut or limitation:** None / describe
 
 ## Entries
+
+### 2026-09-19 19:04:00 +01:00 — Phase 6 — User-requested handoff checkpoint
+
+- **Purpose:** Stop immediately at the user's token-limit request while preserving a truthful, resumable checkpoint for another AI agent.
+- **Plan requirement(s):** Continuous build log, team handoff, clean-environment build, commit/push discipline, no fabricated results.
+- **Files changed:** `.gitignore`; `NEXT_AGENT_PROMPT.md`; `AI_CONTINUATION_LOG.md`; build log and team handoff.
+- **Commands/tests run:** Fresh clone of pushed `origin/main` into `.clean-check` at `b94318a`; `uv sync --frozen` succeeded with Python 3.12.14 and 45 packages. The fresh-clone full pytest command was started but intentionally interrupted by the user after about 0.7 seconds.
+- **Result:** PARTIAL — clean clone and locked dependency installation pass; fresh-clone pytest has no valid result. The prior working-tree final gate remains `255 passed, 2 skipped`, starter suites `6 passed` and `2 passed`, Ruff/mypy/replay/digest/viewer checks pass.
+- **Run, trace, configuration, or commit ID:** Pushed deliverable commit `b94318a`; clean clone HEAD `b94318a`.
+- **Decision:** Do not restart work after the explicit stop. Preserve the clean clone and require the next agent to append to `AI_CONTINUATION_LOG.md` with exact changes, tests, problems, and commits.
+- **Problem observed:** User token budget was nearly exhausted.
+- **Root cause:** External session constraint, not a repository defect.
+- **Resolution or next action:** Use `NEXT_AGENT_PROMPT.md`; finish clean-clone verification only in the next session, then assist with video and external submission steps.
+- **Scope cut or limitation:** Fresh-clone test remains unverified. No official submission receipt or video file exists yet.
 
 ### 2026-09-19 18:46:13 +01:00 — Phase 4/5 — Evidence freeze, observability, and report package
 

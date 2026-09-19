@@ -95,6 +95,8 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Run the final full suite and deterministic-digest reproduction, then verify a fresh clone. Record
-the 5-10 minute video from `docs/video-script.md`. The actual recording/upload, submission URL, and
-receipt require the team's external accounts and cannot be fabricated by a coding agent.
+Read `NEXT_AGENT_PROMPT.md` and append all work to `AI_CONTINUATION_LOG.md`. A fresh clone at
+`.clean-check` is on `b94318a`, and `uv sync --frozen` passed there; its full pytest run was
+user-interrupted and remains unverified. Finish that check, then record the 5-10 minute video from
+`docs/video-script.md`. The actual recording/upload, submission URL, and receipt require the team's
+external accounts and cannot be fabricated by a coding agent.
