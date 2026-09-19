@@ -6,7 +6,8 @@
 - Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
-- Phase exit: open. The Qwen3-8B live-agent run and the custom deterministic firewall foundation are not complete.
+- Phase exit: open. The ToolSpec/record foundation is complete; Qwen3-8B, gate evaluation, approvals,
+  guarded execution, and end-to-end outcome paths remain open.
 
 ## Verified setup and commands
 
@@ -45,6 +46,7 @@ restart the shell after installation.
 - Ruff lint: pass.
 - Ruff format check: pass after formatting.
 - mypy: pass, 65 source files.
+- Firewall foundation: 8 focused tests pass; Ruff and mypy pass across 69 source files.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
 
@@ -62,6 +64,6 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Implement versioned ToolSpecs and immutable policy/task-scope records in isolated modules, with a
-test proving the manifest covers every runtime-registered tool and that the decision API cannot
-accept evaluator-only metadata. Do not add scenario-specific behavior.
+Implement trusted action normalization/provenance transformations and the deterministic G1–G7 gate
+evaluator against the new records. Keep scenario/evaluator metadata structurally absent, and do not
+integrate execution until focused gate tests pass.

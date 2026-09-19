@@ -43,6 +43,13 @@ GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` c
 See [BUILD_LOG.md](BUILD_LOG.md) for the exact commands, trace ID, limitations, and current phase,
 and [docs/TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) for continuation notes.
 
+The custom defense foundation lives in `src/sentinel/firewall/`. It currently provides a strict
+versioned ToolSpec manifest for all registered tools, immutable hash-bound policy snapshots,
+authenticated task/workflow records, runtime provenance nodes, and a decision context that cannot
+represent scenario identifiers, reference plans, labels, success conditions, or expected outcomes.
+Gate evaluation and guarded execution are built as later isolated units; code existence is not
+reported as an end-to-end defense result until those exit tests pass.
+
 ## Architecture
 
 This repository is the simulator and reference tooling SENTINEL provides to every team: the

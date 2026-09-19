@@ -7,7 +7,7 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 ## Current status
 
 - Active phase: Phase 1 — Contract and foundation
-- Last updated: 2026-09-19 13:50:50 +01:00
+- Last updated: 2026-09-19 13:58:05 +01:00
 - Phase exit status: In progress
 - Current blocker: The mock-model contract is verified; the reference Qwen3-8B run and custom deterministic foundation are not yet complete.
 
@@ -70,3 +70,17 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Root cause:** Known — host setup plus platform-specific path and symlink behavior, not defense behavior.
 - **Resolution or next action:** Installed `uv 0.12.17`; executed Makefile targets directly because GNU Make is unavailable; made fixture absolute-path validation portable across POSIX and Windows syntax; skip symlink assertions only when Windows reports privilege error 1314. Final results: main suite `190 passed, 2 skipped`; python-defense kit `6 passed`; learned-monitor kit `2 passed`; Ruff passed; mypy passed. Next implement the typed ToolSpec/policy/task-scope foundation without evaluation metadata.
 - **Scope cut or limitation:** The two skipped tests still need a symlink-capable clean-environment run. `make test` and `make run-baseline` were executed via their exact underlying commands because this host lacks GNU Make. Qwen3-8B has not yet been exercised through the reference adapter.
+
+### 2026-09-19 13:58:05 +01:00 — Phase 1 — Trusted ToolSpec and decision-record foundation
+
+- **Purpose:** Establish immutable trusted types for later G1–G7 evaluation without changing the organizer model, tools, HTTP contract, gateway, or replay path.
+- **Plan requirement(s):** Strict versioned ToolSpecs for every supported tool; immutable policy snapshot; authenticated task scope; authoritative workflow-state shape; runtime provenance/source-node shape; candidate normalization record; structural exclusion of evaluator-only metadata.
+- **Files changed:** `src/sentinel/firewall/__init__.py`; `src/sentinel/firewall/records.py`; `src/sentinel/firewall/toolspecs.py`; `src/sentinel/firewall/policy.py`; `tests/unit/test_firewall_foundation.py`; `README.md`; `docs/TEAM_HANDOFF.md`; `BUILD_LOG.md`.
+- **Commands/tests run:** `pytest -q tests/unit/test_firewall_foundation.py`; `ruff check src/sentinel/firewall tests/unit/test_firewall_foundation.py`; `ruff format --check src/sentinel/firewall tests/unit/test_firewall_foundation.py`; `mypy`.
+- **Result:** PASS — 8 focused tests pass; Ruff passes; mypy passes across 69 source files.
+- **Run, trace, configuration, or commit ID:** ToolSpec version `1.0.0`; normalizer version `sentinel-c14n/1`; commit pending at entry time.
+- **Decision:** Keep schemas derived from the actual runtime tool argument models, but require an explicit trusted semantics overlay for every registered tool. Manifest construction fails if a tool is unknown or an overlay is stale. Store strict schema as canonical JSON so the frozen record has no mutable nested schema object.
+- **Problem observed:** Pydantic frozen models do not make nested dictionaries deeply immutable; an ordinary schema dictionary would therefore weaken the immutable-manifest claim.
+- **Root cause:** Known — Python container mutability inside otherwise frozen models.
+- **Resolution or next action:** Store canonical schema and policy bodies as strings, expose parsed copies, and bind each snapshot to a deterministic SHA-256. Next add trusted action normalization/provenance transformation and the deterministic G1–G7 evaluator.
+- **Scope cut or limitation:** This unit defines trusted records and coverage only. It does not yet bind a scope to a scenario run, issue approvals, evaluate gates, or execute actions.
