@@ -236,11 +236,3 @@ docs/          architecture, guides, threat and security models, scoring, author
 - [Offline observability viewer](observability/sentinel-trace-viewer.html)
 - [Security policy](SECURITY.md)
 
-## Important dates
-
-Challenge release **17/09**, info session **18/09** (time TBA), submission deadline **22/09 23:59**.
-Questions: **skander.yacoubi@supcom.tn**.
-
-## License
-
-Apache-2.0. See [LICENSE](LICENSE).
