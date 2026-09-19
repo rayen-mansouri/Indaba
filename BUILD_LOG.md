@@ -7,7 +7,7 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 ## Current status
 
 - Active phase: Phase 1 — Contract and foundation
-- Last updated: 2026-09-19 13:58:05 +01:00
+- Last updated: 2026-09-19 14:14:43 +01:00
 - Phase exit status: In progress
 - Current blocker: The mock-model contract is verified; the reference Qwen3-8B run and custom deterministic foundation are not yet complete.
 
@@ -84,3 +84,17 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Root cause:** Known — Python container mutability inside otherwise frozen models.
 - **Resolution or next action:** Store canonical schema and policy bodies as strings, expose parsed copies, and bind each snapshot to a deterministic SHA-256. Next add trusted action normalization/provenance transformation and the deterministic G1–G7 evaluator.
 - **Scope cut or limitation:** This unit defines trusted records and coverage only. It does not yet bind a scope to a scenario run, issue approvals, evaluate gates, or execute actions.
+
+### 2026-09-19 14:14:43 +01:00 — Phase 2/3 core — Normalization, provenance, approvals, and G1–G7
+
+- **Purpose:** Implement the deterministic enforcement logic independently of simulator integration so its security semantics can be tested without evaluator metadata.
+- **Plan requirement(s):** Strict trusted adapters; canonical destinations; transformation-aware provenance; G1–G7; protected exact-action approval binding; expiry/stale-state/stale-policy/role/denial/replay handling; unknown-tool and unknown-sensitivity fail-safe behavior.
+- **Files changed:** `src/sentinel/firewall/approvals.py`; `src/sentinel/firewall/gates.py`; `src/sentinel/firewall/normalization.py`; `src/sentinel/firewall/provenance.py`; `src/sentinel/firewall/records.py`; `src/sentinel/firewall/policy.py`; `src/sentinel/firewall/__init__.py`; `tests/unit/test_firewall_gates.py`; `tests/unit/test_firewall_provenance.py`; `tests/unit/test_firewall_foundation.py`; documentation.
+- **Commands/tests run:** Focused firewall pytest suite; full `pytest`; full Ruff lint/format check; full `mypy`.
+- **Result:** PASS — 33 firewall tests pass; full suite `223 passed, 2 skipped`; Ruff passes; mypy passes across 73 source files.
+- **Run, trace, configuration, or commit ID:** Commit pending at entry time; no end-to-end firewall trace yet.
+- **Decision:** Apply typed alias mappings before strict argument validation, preserve non-email identifier case, and lowercase only canonical email addresses. Evaluate all seven gate records for each normalized tool action. Missing approval alone yields `ESCALATE`; any other applicable gate failure yields `BLOCK`; a clean evaluation yields `ALLOW`.
+- **Problem observed:** Initial focused tests found alias canonicalization after validation rejected trusted short aliases, while unconditional lowercasing corrupted typed identifiers such as `BEN-01` and caused false scope/destination failures.
+- **Root cause:** Known — canonicalization order and treating all destinations as email-like strings.
+- **Resolution or next action:** Canonicalize only declared destination fields before validation, using explicit trusted aliases; preserve case for non-email typed identifiers. Next bind the core to a run-owned task scope and guarded executor, then add rewrite revalidation and digest-linked trace events.
+- **Scope cut or limitation:** G1–G7 and the approval store are not yet on the live agent execution path. Decoding covers plain input plus Base64, hex, URL encoding, ROT13, reversal, whitespace joining, and split concatenation; optional compressed synthetic variants remain deferred until official end-to-end coverage is reproducible.

@@ -6,8 +6,9 @@
 - Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
-- Phase exit: open. The ToolSpec/record foundation is complete; Qwen3-8B, gate evaluation, approvals,
-  guarded execution, and end-to-end outcome paths remain open.
+- Phase exit: open. ToolSpecs, normalization, provenance transformations, approvals, and isolated
+  G1–G7 evaluation are complete; Qwen3-8B, guarded execution, rewrites, trace continuity, and
+  end-to-end outcome paths remain open.
 
 ## Verified setup and commands
 
@@ -40,13 +41,14 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Main suite: `190 passed, 2 skipped`.
+- Main suite: `223 passed, 2 skipped`.
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
 - Ruff format check: pass after formatting.
 - mypy: pass, 65 source files.
 - Firewall foundation: 8 focused tests pass; Ruff and mypy pass across 69 source files.
+- Firewall core: 33 focused tests pass; Ruff passes; mypy passes across 73 source files.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
 
@@ -64,6 +66,6 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Implement trusted action normalization/provenance transformations and the deterministic G1–G7 gate
-evaluator against the new records. Keep scenario/evaluator metadata structurally absent, and do not
-integrate execution until focused gate tests pass.
+Bind a structured authenticated `TaskScope`, immutable `PolicySnapshot`, adapters, gates, approval
+store, and a guarded executor to each simulator run. Add policy-owned rewrites with full revalidation
+and trusted digest-linked trace events. Keep evaluator metadata outside every new API.

@@ -35,6 +35,8 @@ class Transformation(StrEnum):
     PARSE = "parse"
     BASE64_DECODE = "base64_decode"
     HEX_DECODE = "hex_decode"
+    URL_DECODE = "url_decode"
+    ROT13_DECODE = "rot13_decode"
     REVERSE = "reverse"
     WHITESPACE_JOIN = "whitespace_join"
     CONCATENATE = "concatenate"
@@ -53,6 +55,7 @@ class SourceNode(_Frozen):
     source_kind: str = Field(min_length=1, max_length=64)
     trust_label: TrustLevel
     sensitivity: DataSensitivity = DataSensitivity.UNKNOWN
+    allowed_destinations: tuple[TrustLevel, ...] = ()
     parent_ids: tuple[str, ...] = ()
     transformation: Transformation = Transformation.DIRECT
 
@@ -100,6 +103,7 @@ class TaskScope(_Frozen):
     task_id: str = Field(min_length=1, max_length=160)
     principal: AuthenticatedPrincipal
     grants: tuple[CapabilityGrant, ...]
+    approval_roles: tuple[str, ...] = ()
     delegation_roles: tuple[str, ...] = ()
     issued_state_version: int = Field(ge=0)
 
@@ -131,11 +135,17 @@ class WorkflowState(_Frozen):
         return match.lifecycle if match else None
 
 
+class FieldDependency(_Frozen):
+    field: str = Field(pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    node_ids: tuple[str, ...]
+
+
 class NormalizedAction(_Frozen):
     raw_proposal: CandidateAction
     executable: CandidateAction
     canonical_destinations: tuple[str, ...] = ()
     dependency_node_ids: tuple[str, ...] = ()
+    field_dependencies: tuple[FieldDependency, ...] = ()
     tool_spec_version: str | None = None
     normalizer_version: str
     action_digest: str
@@ -145,6 +155,10 @@ class NormalizedAction(_Frozen):
         if self.action_digest != self.executable.digest():
             raise ValueError("action_digest does not match the executable action")
         return self
+
+    def dependencies_for(self, field: str) -> tuple[str, ...]:
+        match = next((item for item in self.field_dependencies if item.field == field), None)
+        return match.node_ids if match else ()
 
 
 class ObservedContent(_Frozen):
@@ -164,6 +178,25 @@ class DecisionContext(_Frozen):
     active_policy_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     task_scope: TaskScope
     observed_content: tuple[ObservedContent, ...] = ()
+
+    @model_validator(mode="after")
+    def _security_metadata_is_complete(self) -> DecisionContext:
+        nodes = {node.node_id: node for node in self.provenance}
+        if len(nodes) != len(self.provenance):
+            raise ValueError("duplicate provenance node IDs")
+        for node in self.provenance:
+            if node.run_id != self.run_id or node.session_id != self.session_id:
+                raise ValueError("provenance node is bound to another run or session")
+            missing_parents = set(node.parent_ids) - set(nodes)
+            if missing_parents:
+                raise ValueError(f"provenance parents are missing: {sorted(missing_parents)}")
+        referenced = set(self.candidate.dependency_node_ids)
+        referenced.update(node_id for item in self.observed_content for node_id in item.source_node_ids)
+        referenced.update(node_id for item in self.candidate.field_dependencies for node_id in item.node_ids)
+        missing = referenced - set(nodes)
+        if missing:
+            raise ValueError(f"referenced provenance nodes are missing: {sorted(missing)}")
+        return self
 
 
 EVALUATOR_ONLY_FIELDS = frozenset(

@@ -39,7 +39,7 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-2026-09-19 audit result was `190 passed, 2 skipped`; both skips require Windows symlink privilege.
+latest 2026-09-19 regression result was `223 passed, 2 skipped`; both skips require Windows symlink privilege.
 See [BUILD_LOG.md](BUILD_LOG.md) for the exact commands, trace ID, limitations, and current phase,
 and [docs/TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) for continuation notes.
 
@@ -49,6 +49,12 @@ authenticated task/workflow records, runtime provenance nodes, and a decision co
 represent scenario identifiers, reference plans, labels, success conditions, or expected outcomes.
 Gate evaluation and guarded execution are built as later isolated units; code existence is not
 reported as an end-to-end defense result until those exit tests pass.
+
+The isolated core now also includes strict action normalization, trusted destination aliases,
+lineage-preserving decoding/transformation nodes, a protected one-time approval store, and
+deterministic G1–G7 evaluation. It is intentionally not advertised as a live defense yet: binding
+the run-owned task scope, guarded executor, rewrite revalidation, and digest-linked trace events is
+the next integration unit.
 
 ## Architecture
 

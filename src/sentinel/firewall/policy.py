@@ -17,6 +17,7 @@ class PolicySnapshot(BaseModel):
     run_id: str = Field(min_length=1, max_length=160)
     policy_id: str
     policy_version: int = Field(ge=1)
+    allowed_tools: tuple[str, ...]
     manifest_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     canonical_policy_json: str
     policy_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -27,6 +28,7 @@ class PolicySnapshot(BaseModel):
             self.run_id,
             self.policy_id,
             self.policy_version,
+            self.allowed_tools,
             self.manifest_hash,
             self.canonical_policy_json,
         ):
@@ -34,24 +36,50 @@ class PolicySnapshot(BaseModel):
         return self
 
     @classmethod
-    def capture(cls, run_id: str, policy: Policy, manifest: ToolManifest) -> PolicySnapshot:
+    def capture(
+        cls,
+        run_id: str,
+        policy: Policy,
+        manifest: ToolManifest,
+        allowed_tools: tuple[str, ...],
+    ) -> PolicySnapshot:
+        unknown = sorted(set(allowed_tools) - {spec.name for spec in manifest.specs})
+        if unknown:
+            raise ValueError(f"policy snapshot contains unknown allowed tools: {unknown}")
+        normalized_tools = tuple(sorted(set(allowed_tools)))
         canonical = json.dumps(policy.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-        digest = _policy_hash(run_id, policy.id, policy.version, manifest.manifest_hash, canonical)
+        digest = _policy_hash(
+            run_id,
+            policy.id,
+            policy.version,
+            normalized_tools,
+            manifest.manifest_hash,
+            canonical,
+        )
         return cls(
             run_id=run_id,
             policy_id=policy.id,
             policy_version=policy.version,
+            allowed_tools=normalized_tools,
             manifest_hash=manifest.manifest_hash,
             canonical_policy_json=canonical,
             policy_hash=digest,
         )
 
 
-def _policy_hash(run_id: str, policy_id: str, version: int, manifest_hash: str, canonical: str) -> str:
+def _policy_hash(
+    run_id: str,
+    policy_id: str,
+    version: int,
+    allowed_tools: tuple[str, ...],
+    manifest_hash: str,
+    canonical: str,
+) -> str:
     payload = {
         "run_id": run_id,
         "policy_id": policy_id,
         "policy_version": version,
+        "allowed_tools": allowed_tools,
         "manifest_hash": manifest_hash,
         "policy": json.loads(canonical),
     }

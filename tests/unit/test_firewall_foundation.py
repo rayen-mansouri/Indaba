@@ -81,9 +81,10 @@ def test_manifest_hash_is_stable_and_detects_tampering() -> None:
 def test_policy_snapshot_is_run_and_manifest_bound() -> None:
     manifest = build_official_tool_manifest()
     policy = load_policy(ROOT, "finance_standard")
-    first = PolicySnapshot.capture("run-1", policy, manifest)
-    again = PolicySnapshot.capture("run-1", policy, manifest)
-    other_run = PolicySnapshot.capture("run-2", policy, manifest)
+    allowed = ("payment_prepare", "payment_confirm")
+    first = PolicySnapshot.capture("run-1", policy, manifest, allowed)
+    again = PolicySnapshot.capture("run-1", policy, manifest, allowed)
+    other_run = PolicySnapshot.capture("run-2", policy, manifest, allowed)
     assert first.policy_hash == again.policy_hash
     assert first.policy_hash != other_run.policy_hash
     with pytest.raises(ValidationError):
