@@ -35,6 +35,8 @@ class Transformation(StrEnum):
     PARSE = "parse"
     BASE64_DECODE = "base64_decode"
     HEX_DECODE = "hex_decode"
+    GZIP_DECOMPRESS = "gzip_decompress"
+    ZLIB_DECOMPRESS = "zlib_decompress"
     URL_DECODE = "url_decode"
     ROT13_DECODE = "rot13_decode"
     REVERSE = "reverse"

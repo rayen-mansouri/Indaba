@@ -23,7 +23,7 @@ from sentinel.firewall.normalization import (
     TrustedActionAdapters,
 )
 from sentinel.firewall.policy import PolicySnapshot
-from sentinel.firewall.provenance import ProvenanceGraph, derive_observed_variants
+from sentinel.firewall.provenance import ProvenanceGraph, contains_transformed_value, derive_observed_variants
 from sentinel.firewall.records import (
     AuthenticatedPrincipal,
     CapabilityGrant,
@@ -122,7 +122,7 @@ class SentinelFirewallDefense(Defense):
         self._source_ids: dict[str, str] = {}
         self._observed_by_step: dict[int, tuple[ObservedContent, ...]] = {}
         self._decision_actions: dict[int, set[str]] = {}
-        self._traced_digests: set[str] = set()
+        self._traced_actions: set[tuple[str, int]] = set()
         self._permits: dict[str, _Permit] = {}
         self._permit_counter = 0
         self._state_version = 0
@@ -202,7 +202,7 @@ class SentinelFirewallDefense(Defense):
         self, text: str, default: DataSensitivity
     ) -> tuple[DataSensitivity, tuple[TrustLevel, ...], bool]:
         assert self._state is not None
-        matches = [canary for canary in self._state.canaries if canary.value in text]
+        matches = [canary for canary in self._state.canaries if contains_transformed_value(text, canary.value)]
         if not matches:
             return default, (), False
         sensitivity = max(
@@ -429,6 +429,7 @@ class SentinelFirewallDefense(Defense):
         evaluation: GateEvaluation,
         outcome: Decision,
         replacement: CandidateAction | None,
+        rewrite_revalidation: GateEvaluation | None = None,
     ) -> None:
         link = self._link(effective, self._state_version)
         proposal_payload = {
@@ -438,7 +439,7 @@ class SentinelFirewallDefense(Defense):
             "original_proposal": request.candidate_action.model_dump(mode="json"),
         }
         self._append(EventType.ACTION_PROPOSAL, Actor.DEFENSE, request.step_id, proposal_payload)
-        self._traced_digests.add(effective.action_digest)
+        self._traced_actions.add((effective.action_digest, self._state_version))
         if replacement is not None:
             self._append(
                 EventType.ACTION_REWRITE,
@@ -463,6 +464,11 @@ class SentinelFirewallDefense(Defense):
                 "reason_codes": list(evaluation.reason_codes),
                 "risk_score": evaluation.risk_score,
                 "gates": [gate.model_dump(mode="json") for gate in evaluation.gate_results],
+                "rewrite_revalidation_gates": [
+                    gate.model_dump(mode="json") for gate in rewrite_revalidation.gate_results
+                ]
+                if rewrite_revalidation is not None
+                else [],
                 "provenance": {
                     "node_count": len(self._graph.nodes) if self._graph is not None else 0,
                     "dependency_count": len(effective.dependency_node_ids),
@@ -540,7 +546,7 @@ class SentinelFirewallDefense(Defense):
                     "original_proposal": raw.model_dump(mode="json"),
                 },
             )
-            self._traced_digests.add(normalized.action_digest)
+            self._traced_actions.add((normalized.action_digest, self._state_version))
             self._append(
                 EventType.FIREWALL_DECISION,
                 Actor.DEFENSE,
@@ -583,7 +589,16 @@ class SentinelFirewallDefense(Defense):
                     effective_evaluation = rewritten_evaluation
                     outcome = Decision.ESCALATE
         self._decision_actions.setdefault(request.step_id, set()).add(effective.action_digest)
-        self._emit_decision(request, original, effective, effective_evaluation, outcome, replacement)
+        decision_evaluation = evaluation if outcome is Decision.REWRITE else effective_evaluation
+        self._emit_decision(
+            request,
+            original,
+            effective,
+            decision_evaluation,
+            outcome,
+            replacement,
+            effective_evaluation if outcome is Decision.REWRITE else None,
+        )
         reason_codes = (
             ["POLICY_SAFE_REWRITE", *evaluation.reason_codes]
             if outcome is Decision.REWRITE
@@ -591,8 +606,8 @@ class SentinelFirewallDefense(Defense):
         )
         return DefenseDecision(
             decision=outcome,
-            risk_score=evaluation.risk_score if outcome is Decision.REWRITE else effective_evaluation.risk_score,
-            confidence=1.0,
+            risk_score=decision_evaluation.risk_score,
+            confidence=decision_evaluation.confidence,
             reason_codes=list(dict.fromkeys(reason_codes)),
             explanation="Deterministic G1-G7 policy decision.",
             rewritten_action=replacement,
@@ -632,7 +647,8 @@ class SentinelFirewallDefense(Defense):
             for field in (spec.amount_fields if spec else ())
             if field in normalized.executable.arguments
         }
-        if normalized.action_digest not in self._traced_digests:
+        trace_key = (normalized.action_digest, self._state_version)
+        if trace_key not in self._traced_actions:
             self._append(
                 EventType.ACTION_PROPOSAL,
                 Actor.DEFENSE,
@@ -645,7 +661,7 @@ class SentinelFirewallDefense(Defense):
                     "source": "confirmation_target",
                 },
             )
-            self._traced_digests.add(normalized.action_digest)
+            self._traced_actions.add(trace_key)
         self._append(
             EventType.APPROVAL_RECORD,
             Actor.DEFENSE,

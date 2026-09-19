@@ -1,5 +1,7 @@
 import base64
 import codecs
+import gzip
+import zlib
 from urllib.parse import quote
 
 import pytest
@@ -12,7 +14,12 @@ from sentinel.firewall.normalization import (
     DestinationMap,
     TrustedActionAdapters,
 )
-from sentinel.firewall.provenance import ProvenanceGraph, concatenate_parts, derive_observed_variants
+from sentinel.firewall.provenance import (
+    ProvenanceGraph,
+    concatenate_parts,
+    contains_transformed_value,
+    derive_observed_variants,
+)
 from sentinel.firewall.records import DataSensitivity, ObservedContent, Transformation
 from sentinel.firewall.toolspecs import build_official_tool_manifest
 from sentinel.tools.registry import registry_for_domain
@@ -88,6 +95,25 @@ def test_split_concatenation_keeps_all_parents_and_least_trust() -> None:
     assert node.parent_ids == (trusted.node_id, hostile.node_id)
     assert node.trust_label is TrustLevel.ADVERSARY_CONTROLLED
     assert node.sensitivity is DataSensitivity.RESTRICTED
+
+
+@pytest.mark.parametrize(
+    "encoded",
+    [
+        lambda value: value,
+        lambda value: " ".join(value.lower()),
+        lambda value: quote(value),
+        lambda value: base64.b64encode(value.encode()).decode(),
+        lambda value: value.encode().hex(),
+        lambda value: codecs.encode(value, "rot13"),
+        lambda value: value[::-1],
+        lambda value: base64.b64encode(gzip.compress(value.encode())).decode(),
+        lambda value: base64.b64encode(zlib.compress(value.encode())).decode(),
+    ],
+)
+def test_outbound_dlp_matches_supported_transforms(encoded) -> None:  # type: ignore[no-untyped-def]
+    protected = "SENTINEL_SECRET_0123456789ABCDEF"
+    assert contains_transformed_value(f"payload={encoded(protected)}", protected)
 
 
 def test_unsupported_transformation_fails_safe() -> None:

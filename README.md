@@ -104,8 +104,9 @@ make test               # unit + integration + security tests, then starter-kit 
 make run-baseline       # one scenario with the provenance baseline, printed as a timeline
 ```
 
-Every command runs offline. The mock model needs no downloads; running the reference Qwen3-8B agent
-needs `uv sync --extra hf` and the weights downloaded ahead of time.
+Every command runs offline. The mock model needs no downloads. The reference Qwen3-8B can run from
+local Hugging Face weights (`uv sync --extra hf`) or from an already installed GGUF through LM
+Studio's local API. Neither adapter receives the mock model's reference plan.
 
 ## Run a baseline
 
@@ -114,12 +115,27 @@ uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.y
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense sentinel
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance --model qwen3-8b
+uv run sentinel run --scenario scenarios/public/enterprise/enterprise_project_status.yaml \
+  --defense sentinel --attacker none --attack-mode none --model lmstudio:sentinel-qwen3-8b
 uv run sentinel replay artifacts/<eval-group>/<run_id>.jsonl
 ```
 
+For the verified local GGUF path used during development:
+
+```bash
+lms server start
+lms load qwen/qwen3-8b --identifier sentinel-qwen3-8b --context-length 8192 --gpu max -y
+```
+
+`lmstudio:<identifier>` uses LM Studio only as the inference runtime. It keeps the same Qwen3-8B,
+system prompt, registered tools, argument schemas, and deterministic decode settings. The first live
+run exposed a missing-schema interface bug; both real-model adapters now show the model the strict
+JSON schemas already registered for those same tools.
+
 Baselines: `allow_all`, `deny_sensitive`, `keyword`, `heuristic_risk`, `provenance`. `--model` selects
-the reference agent's underlying model (`mock` by default, or `qwen3-8b`); `mock` is fast for
-iterating on your decision logic, `qwen3-8b` is what your video and trace should be built on.
+the reference agent's underlying model (`mock` by default, `qwen3-8b` for local Hugging Face
+weights, or `lmstudio:<identifier>` for a loaded local GGUF); `mock` is fast for iterating on decision
+logic, while final live evidence must use Qwen3-8B.
 
 ## Build your defense
 
@@ -153,7 +169,7 @@ score; judges assess your submitted work against the published rubric:
 | --- | --- |
 | `sentinel scenarios validate PATH` | Schema, fixture, policy, tool, and surface checks (`--json`) |
 | `sentinel scenarios list PATH` | Scenario inventory (`--json`) |
-| `sentinel run --scenario PATH --defense MODE [--model mock\|qwen3-8b]` | One scenario with timeline and artifact |
+| `sentinel run --scenario PATH --defense MODE [--model mock\|qwen3-8b\|lmstudio:ID]` | One scenario with timeline and artifact |
 | `sentinel eval public --defense MODE\|--defense-url URL` | Metrics across the published scenario library, for your own report |
 | `sentinel replay ARTIFACT` | Human-readable timeline (`--json`) — this is the evidence your video and report cite |
 | `sentinel submission validate PATH_OR_IMAGE [--live-url URL]` | Optional static/contract checks, useful if you containerize |
@@ -170,7 +186,7 @@ technical report, and repository against the published rubric.
 ```
 src/sentinel/
   core/        provenance, actions, events, scenarios, world state, canaries, policies, results
-  models/      ModelAdapter interface, deterministic MockModelAdapter, HF adapter (Qwen3-8B default)
+  models/      ModelAdapter interface, deterministic mock, HF, and local LM Studio adapters
   agent/       reference agent loop, memory, plan templating
   tools/       tool base class, registry (no network capability), gateway
   domains/     enterprise, finance, soc synthetic tools

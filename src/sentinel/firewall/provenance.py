@@ -5,8 +5,10 @@ from __future__ import annotations
 import base64
 import binascii
 import codecs
+import gzip
 import hashlib
 import re
+import zlib
 from urllib.parse import unquote
 
 from sentinel.core.provenance import Provenance, Sensitivity, TrustLevel, least_trusted
@@ -15,6 +17,8 @@ from sentinel.firewall.records import DataSensitivity, ObservedContent, SourceNo
 _B64_TOKEN = re.compile(r"[A-Za-z0-9+/]{12,}={0,2}")
 _HEX_TOKEN = re.compile(r"(?:[0-9a-fA-F]{2}){6,}")
 _PART = re.compile(r"^\[part\s+\d+/\d+\]\s*", re.IGNORECASE)
+_NON_ALNUM = re.compile(r"[^a-z0-9]")
+MAX_SCAN_CHARS = 200_000
 
 
 def _sensitivity(value: Sensitivity) -> DataSensitivity:
@@ -141,19 +145,52 @@ def _decoded_tokens(text: str, pattern: re.Pattern[str], decoder: str) -> str:
     return "\n".join(decoded)
 
 
+def _decompressed_tokens(text: str, decoder: str) -> str:
+    decoded: list[str] = []
+    for token in (*_B64_TOKEN.findall(text), *_HEX_TOKEN.findall(text)):
+        try:
+            if re.fullmatch(_HEX_TOKEN, token):
+                raw = bytes.fromhex(token)
+            else:
+                raw = base64.b64decode(token + "=" * (-len(token) % 4), validate=True)
+            value = gzip.decompress(raw) if decoder == "gzip" else zlib.decompress(raw)
+            decoded.append(value[:MAX_SCAN_CHARS].decode("utf-8"))
+        except (binascii.Error, UnicodeDecodeError, ValueError, OSError, zlib.error):
+            continue
+    return "\n".join(decoded)
+
+
+def transformed_text_variants(text: str) -> tuple[tuple[Transformation, str], ...]:
+    """Bounded deterministic variants used for provenance and outbound value DLP."""
+    text = text[:MAX_SCAN_CHARS]
+    return (
+        (Transformation.DIRECT, text),
+        (Transformation.BASE64_DECODE, _decoded_tokens(text, _B64_TOKEN, "base64")),
+        (Transformation.HEX_DECODE, _decoded_tokens(text, _HEX_TOKEN, "hex")),
+        (Transformation.GZIP_DECOMPRESS, _decompressed_tokens(text, "gzip")),
+        (Transformation.ZLIB_DECOMPRESS, _decompressed_tokens(text, "zlib")),
+        (Transformation.URL_DECODE, unquote(text)),
+        (Transformation.ROT13_DECODE, codecs.decode(text, "rot13")),
+        (Transformation.REVERSE, text[::-1]),
+        (Transformation.WHITESPACE_JOIN, re.sub(r"\s+", "", text)),
+    )
+
+
+def contains_transformed_value(text: str, value: str) -> bool:
+    """Match an exact protected value through the supported reversible transforms."""
+    needle = _NON_ALNUM.sub("", value.lower())
+    return bool(needle) and any(
+        needle in _NON_ALNUM.sub("", variant.lower()) for _, variant in transformed_text_variants(text) if variant
+    )
+
+
 def derive_observed_variants(graph: ProvenanceGraph, observed: ObservedContent) -> tuple[ObservedContent, ...]:
     """Create lineage-preserving forms used by the official obfuscation library."""
-    candidates = (
-        (Transformation.BASE64_DECODE, _decoded_tokens(observed.content, _B64_TOKEN, "base64")),
-        (Transformation.HEX_DECODE, _decoded_tokens(observed.content, _HEX_TOKEN, "hex")),
-        (Transformation.URL_DECODE, unquote(observed.content)),
-        (Transformation.ROT13_DECODE, codecs.decode(observed.content, "rot13")),
-        (Transformation.REVERSE, observed.content[::-1]),
-        (Transformation.WHITESPACE_JOIN, re.sub(r"\s+", "", observed.content)),
-    )
     variants = [observed]
     seen = {observed.content}
-    for transformation, content in candidates:
+    for transformation, content in transformed_text_variants(observed.content):
+        if transformation is Transformation.DIRECT:
+            continue
         if not content or content in seen:
             continue
         node = graph.derive(observed.source_node_ids, transformation)

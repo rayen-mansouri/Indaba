@@ -103,7 +103,9 @@ class HFModelAdapter(ModelAdapter):
     def _messages(self, context: AgentContext) -> list[dict[str, str]]:
         history = "\n".join(f"[{obs.kind}] {obs.text}" for obs in context.observations)
         history = history[-self._max_context_chars :]
-        tools = json.dumps([{k: t[k] for k in ("name", "description", "consequential")} for t in self._tools])
+        tools = json.dumps(
+            [{k: t[k] for k in ("name", "description", "parameters", "consequential")} for t in self._tools]
+        )
         return [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Tools: {tools}\nGoal: {self._goal}\nHistory:\n{history}"},

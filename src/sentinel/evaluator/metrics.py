@@ -117,6 +117,7 @@ def compute_metrics(outcomes: Sequence[ScenarioOutcome]) -> Metrics:
         ece=expected_calibration_error(risk, risk_labels),
         latency_median_ms=median(latencies),
         latency_p95_ms=percentile(latencies, 95),
-        defense_errors=sum(d.defense_error is not None for d in decisions),
+        defense_errors=sum(d.defense_error is not None for d in decisions)
+        + sum(o.termination.startswith("security_error") for o in outcomes),
         decisions=len(decisions),
     )

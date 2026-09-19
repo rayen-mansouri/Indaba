@@ -125,6 +125,7 @@ def test_all_seven_gates_are_reported_and_scoped_prepare_is_allowed() -> None:
     )
     result = evaluator.evaluate(context, NOW)
     assert result.outcome is Decision.ALLOW
+    assert result.risk_score == 0.03 and result.confidence == 0.99
     assert {gate.gate for gate in result.gate_results} == set(GateName)
 
 
@@ -197,7 +198,9 @@ def test_g3_and_g4_require_authoritative_lifecycle_and_bound_approval() -> None:
             succeeded_tools=("payment_prepare",),
         ),
     )
-    assert evaluator.evaluate(context, NOW).outcome is Decision.ESCALATE
+    missing = evaluator.evaluate(context, NOW)
+    assert missing.outcome is Decision.ESCALATE
+    assert missing.risk_score == 0.55 and missing.confidence == 0.97
     approvals.issue(
         issuer_id="officer-1",
         issuer_role="officer",

@@ -94,11 +94,16 @@ def _attacker_factory(attacker: str) -> Callable[[], Any] | None:
 
 
 def _model_factory(model: str) -> Callable[[], Any]:
-    """mock (default, offline) | qwen3-8b | any local Hugging Face model path."""
+    """mock | qwen3-8b/Hugging Face path | lmstudio[:loaded-model-id]."""
     if model == "mock":
         from sentinel.models.mock import MockModelAdapter
 
         return MockModelAdapter
+    if model == "lmstudio" or model.startswith("lmstudio:"):
+        from sentinel.models.lmstudio_adapter import DEFAULT_LMSTUDIO_MODEL, LMStudioModelAdapter
+
+        identifier = model.partition(":")[2] or DEFAULT_LMSTUDIO_MODEL
+        return lambda: LMStudioModelAdapter(identifier)
     from sentinel.models.hf_adapter import DEFAULT_MODEL, HFModelAdapter
 
     path = DEFAULT_MODEL if model in ("qwen3-8b", "qwen3", "qwen", "default") else model
@@ -217,7 +222,7 @@ def run(
     defense_url: Annotated[str | None, typer.Option("--defense-url", help="Defense service URL.")] = None,
     attacker: Annotated[str, typer.Option(help="none | static | mutation")] = "static",
     attack_mode: Annotated[str, typer.Option(help="static | adaptive | none")] = "static",
-    model: Annotated[str, typer.Option(help="mock (offline, default) | qwen3-8b | a local HF model path")] = "mock",
+    model: Annotated[str, typer.Option(help="mock | qwen3-8b | local HF path | lmstudio[:loaded-model-id]")] = "mock",
     artifacts: ArtifactsOpt = Path("artifacts"),
     timeline: Annotated[bool, typer.Option("--timeline/--no-timeline")] = True,
     config: ConfigOpt = None,
@@ -366,7 +371,9 @@ def _eval_command(split: str, default_path: Callable[[], Path]) -> Callable[...,
         scenarios: Annotated[Path | None, typer.Option("--scenarios", help="Override scenario path.")] = None,
         attacker: Annotated[str, typer.Option(help="none | static | mutation")] = "static",
         attack_mode: Annotated[str, typer.Option(help="static | adaptive | none")] = "static",
-        model: Annotated[str, typer.Option(help="mock (offline) | qwen3-8b | a local HF model path")] = "mock",
+        model: Annotated[
+            str, typer.Option(help="mock | qwen3-8b | local HF path | lmstudio[:loaded-model-id]")
+        ] = "mock",
         artifacts: ArtifactsOpt = Path("artifacts"),
         config: ConfigOpt = None,
         output: Annotated[Path | None, typer.Option("--output", help="Also write the scorecard here.")] = None,

@@ -65,16 +65,17 @@ def _link(event: Event) -> tuple[object, ...]:
 def verify_digest_linked_trace(events: tuple[Event, ...] | list[Event]) -> TraceContinuityReport:
     """Reject missing links, invalid emitters, digest drift, and receipt/state mismatches."""
     security = [event for event in events if event.type in SECURITY_EVENT_TYPES]
-    by_digest: dict[str, list[Event]] = {}
+    by_link: dict[tuple[object, ...], list[Event]] = {}
     for event in security:
         expected_emitter, expected_actor = _EMITTERS[event.type]
         if event.payload.get("emitter") != expected_emitter or event.actor is not expected_actor:
             raise TraceIntegrityError(f"{event.event_id} has an untrusted security-event emitter")
         link = _link(event)
-        by_digest.setdefault(str(link[0]), []).append(event)
+        by_link.setdefault(link, []).append(event)
 
     executed = 0
-    for digest, chain in by_digest.items():
+    for link, chain in by_link.items():
+        digest = str(link[0])
         proposals = [event for event in chain if event.type is EventType.ACTION_PROPOSAL]
         decisions = [event for event in chain if event.type is EventType.FIREWALL_DECISION]
         rewrites = [event for event in chain if event.type is EventType.ACTION_REWRITE]
@@ -83,34 +84,32 @@ def verify_digest_linked_trace(events: tuple[Event, ...] | list[Event]) -> Trace
         states = [event for event in chain if event.type is EventType.STATE_VERIFIED]
         if (decisions or rewrites or approvals or receipts or states) and not proposals:
             raise TraceIntegrityError(f"action {digest} has security events without a proposal")
-        canonical = _link(proposals[0]) if proposals else None
-        for event in chain:
-            if canonical is not None and _link(event) != canonical:
-                raise TraceIntegrityError(f"action {digest} has inconsistent trace linkage at {event.event_id}")
-        if decisions and min(event.seq for event in decisions) < min(event.seq for event in proposals):
-            raise TraceIntegrityError(f"action {digest} has a decision before its proposal")
+        for event in decisions:
+            if not any(proposal.seq < event.seq for proposal in proposals):
+                raise TraceIntegrityError(f"action {digest} has a decision before its proposal")
         if rewrites:
             for event in rewrites:
                 replacement = CandidateAction.model_validate(event.payload.get("replacement"))
                 if replacement.digest() != digest:
                     raise TraceIntegrityError(f"{event.event_id} replacement digest does not match its trace")
         if receipts:
-            executed += 1
+            executed += len(receipts)
             if not decisions:
                 raise TraceIntegrityError(f"executed action {digest} has no firewall decision")
-            if len(receipts) != 1 or len(states) != 1:
-                raise TraceIntegrityError(f"executed action {digest} must have one receipt and one state result")
-            receipt = receipts[0]
-            state = states[0]
-            if receipt.seq >= state.seq:
-                raise TraceIntegrityError(f"action {digest} state result does not follow its receipt")
-            executed_action = CandidateAction.model_validate(receipt.payload.get("executed_action"))
-            if executed_action.digest() != digest:
-                raise TraceIntegrityError(f"{receipt.event_id} does not match the executed action digest")
+            if len(receipts) != len(states):
+                raise TraceIntegrityError(f"executed action {digest} has an unmatched receipt or state result")
+            for receipt, state in zip(receipts, states, strict=True):
+                if not any(decision.seq < receipt.seq for decision in decisions):
+                    raise TraceIntegrityError(f"executed action {digest} has no prior firewall decision")
+                if receipt.seq >= state.seq:
+                    raise TraceIntegrityError(f"action {digest} state result does not follow its receipt")
+                executed_action = CandidateAction.model_validate(receipt.payload.get("executed_action"))
+                if executed_action.digest() != digest:
+                    raise TraceIntegrityError(f"{receipt.event_id} does not match the executed action digest")
         elif states:
             raise TraceIntegrityError(f"action {digest} has a state result without an executor receipt")
     return TraceContinuityReport(
         security_events=len(security),
-        action_chains=len(by_digest),
+        action_chains=len(by_link),
         executed_actions=executed,
     )

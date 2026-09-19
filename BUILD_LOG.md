@@ -6,10 +6,10 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 
 ## Current status
 
-- Active phase: Phase 2/3 — Live deterministic core integration
-- Last updated: 2026-09-19 17:53:16 +01:00
-- Phase exit status: Mock-model integration passes; reference-model exit remains open
-- Current blocker: Qwen3-8B has not yet run through the live firewall. Evaluation/report artifacts are still mock-model evidence only.
+- Active phase: Phase 4 — Evidence, utility, and deliverables
+- Last updated: 2026-09-19 18:19:44 +01:00
+- Phase exit status: Deterministic core and local Qwen3-8B invocation pass; three-domain Qwen evidence remains in progress
+- Current blocker: No runtime blocker. The first correct Qwen3-8B run was semantically correct but missed an exact-string date grader; comparative evidence, viewer, report, and video materials remain to be frozen.
 
 ## Entry template
 
@@ -28,6 +28,20 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Scope cut or limitation:** None / describe
 
 ## Entries
+
+### 2026-09-19 18:19:44 +01:00 — Phase 1/3/4 — Local Qwen runtime and defense hardening
+
+- **Purpose:** Exercise the unchanged Qwen3-8B reference model on the live firewall and close technically valid gaps raised by two non-specialist AI reviews.
+- **Plan requirement(s):** Reference-model path; strict tool schemas; output-value DLP over official transforms; G5 memory-authority evidence; deterministic graded risk signals; repeated-action trace continuity; automatic trace verification before a run can count as successful.
+- **Files changed:** Local LM Studio model adapter and CLI selection; HF tool serialization; firewall provenance, records, gates, runtime, and trace verifier; evaluator runner/metrics; integration/unit tests; README and build log.
+- **Commands/tests run:** `lms server start`; `lms load qwen/qwen3-8b --identifier sentinel-qwen3-8b`; direct local API smoke test; two live Qwen3-8B `enterprise_project_status` runs; focused model/firewall/trace/DLP tests; full pytest; both starter-kit suites; Ruff; mypy.
+- **Result:** PASS for local reference-model invocation and firewall enforcement. The corrected Qwen run used the required search/read tools and returned all requested facts semantically; the exact-string grader marked the natural-language date `October 2, 2026` as missing relative to `2026-10-02`, so this run is not claimed as benchmark task success.
+- **Run, trace, configuration, or commit ID:** Model `qwen/qwen3-8b`, local GGUF `Qwen3-8B-Q4_K_M.gguf`, LM Studio identifier `sentinel-qwen3-8b`; corrected run trace `artifacts/eval-run-enterprise_project_status-sentinel-20260919T170903Z/enterprise_project_status-sentinel-s0.jsonl`; starting commit `8e19bc0e46e69ffdebd98aecbef609df8a6ccd8b`.
+- **Decision:** Treat LM Studio as an offline inference runtime only. Preserve the same model, system prompt, and registered tools, while supplying their already verified strict argument schemas to both real-model adapters. Treat risk scores as transparent policy-severity weights and report Brier/ECE separately rather than claiming they are learned probabilities.
+- **Problem observed:** The first Qwen run repeatedly proposed an invalid `email_search` argument because the adapters omitted registered argument schemas from the model-visible tool catalog. The trace verifier also conflated repeated identical actions by digest, and value-level DLP recognized only literal canary strings.
+- **Root cause:** Known — incomplete model/tool serialization, trace grouping that was too coarse, and literal-only candidate payload classification.
+- **Resolution or next action:** Added schema-complete tool serialization with a no-reference-plan regression; keyed trace chains by the full policy/state/task/action link and matched each receipt to a state result; fail a run on trace-integrity errors; detect protected values through spaced, URL, Base64, hex, ROT13, reversed, gzip, and zlib forms; prove poisoned memory remains untrusted evidence and cannot mint approval or destination authority. Next collect three-domain Qwen traces and paired comparative/ablation evidence.
+- **Scope cut or limitation:** The current Qwen run is one enterprise benign case, not full-model benchmark evidence. Risk weights are deterministic and interpretable, with empirical calibration metrics to be reported from evaluation; they are not advertised as probabilistic calibration. Two symlink tests remain skipped on this Windows host due privilege error 1314.
 
 ### 2026-09-18 22:02:36 +01:00 — Phase 1 — Starter-kit contract audit
 

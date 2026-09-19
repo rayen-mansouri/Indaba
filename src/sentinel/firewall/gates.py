@@ -59,6 +59,42 @@ _APPROVAL_REASONS = {
     ApprovalStatus.REPLAYED: "APPROVAL_REPLAYED",
 }
 
+# Deterministic policy-severity weights, not model probabilities. Empirical calibration is
+# reported separately through the evaluator's Brier and ECE metrics.
+_REASON_RISK = {
+    "APPROVAL_REQUIRED": 0.55,
+    "APPROVAL_DENIED": 0.88,
+    "APPROVAL_EXPIRED": 0.86,
+    "APPROVAL_INVALID_ROLE": 0.96,
+    "APPROVAL_MISMATCH": 0.96,
+    "APPROVAL_REPLAYED": 0.99,
+    "APPROVAL_STALE_POLICY": 0.94,
+    "APPROVAL_STALE_STATE": 0.92,
+    "DESTINATION_NOT_AUTHORIZED": 0.97,
+    "DESTINATION_SENSITIVITY_DENIED": 0.99,
+    "LIFECYCLE_MISMATCH": 0.93,
+    "MALFORMED_SECURITY_METADATA": 0.99,
+    "NO_TRUSTED_EFFECT_AUTHORITY": 0.96,
+    "POLICY_TOOL_DENIED": 0.99,
+    "SENSITIVE_EGRESS": 0.99,
+    "TASK_AMOUNT_DENIED": 0.97,
+    "TASK_CAPABILITY_DENIED": 0.98,
+    "TASK_PARAMETER_DENIED": 0.95,
+    "TASK_RESOURCE_DENIED": 0.97,
+    "UNKNOWN_SENSITIVITY": 0.99,
+    "UNKNOWN_TOOL": 0.99,
+    "UNPROTECTED_AUTHORITY_SOURCE": 0.98,
+}
+
+
+def _aggregate_risk(reason_codes: tuple[str, ...]) -> float:
+    if not reason_codes:
+        return 0.03
+    residual = 1.0
+    for code in set(reason_codes):
+        residual *= 1.0 - _REASON_RISK.get(code, 0.9)
+    return round(1.0 - residual, 3)
+
 
 def _matches_constraint(value: str, constraints: tuple[str, ...]) -> bool:
     return any(fnmatchcase(value, constraint) for constraint in constraints)
@@ -95,16 +131,16 @@ class GateEvaluator:
         only_missing_approval = bool(failures) and all(
             result.gate is GateName.G4_APPROVAL and result.reason_codes == ("APPROVAL_REQUIRED",) for result in failures
         )
-        if only_missing_approval:
-            outcome, risk, confidence = Decision.ESCALATE, 0.65, 1.0
-        elif failures:
-            outcome, risk, confidence = Decision.BLOCK, 0.95, 1.0
-        else:
-            outcome, risk, confidence = Decision.ALLOW, 0.05, 1.0
         codes = tuple(dict.fromkeys(code for result in failures for code in result.reason_codes))
+        if only_missing_approval:
+            outcome, confidence = Decision.ESCALATE, 0.97
+        elif failures:
+            outcome, confidence = Decision.BLOCK, 0.99
+        else:
+            outcome, confidence = Decision.ALLOW, 0.99
         return GateEvaluation(
             outcome=outcome,
-            risk_score=risk,
+            risk_score=_aggregate_risk(codes),
             confidence=confidence,
             reason_codes=codes or ("POLICY_CHECKS_PASSED",),
             gate_results=results,
