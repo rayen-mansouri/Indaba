@@ -2,16 +2,18 @@
 
 ## Current state
 
-- Active phase: Phase 5/6 — evidence frozen; clean-environment verification passed. External
-  submission/recording remain.
-- Official starter revision: `87944a1bbb4565fac853e017dac2727b0f377704`.
+- Active phase: Phase 5/6 — defense, evidence supplement, observability, and CI complete. External
+  recording/submission remain.
+- Official starter revision: `c86681a74f3bd7cf1c6be7b3251b575c8600f910`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
 - Mock-model baseline: verified with run ID `finance_false_approval-provenance-s0`.
 - Live firewall: `--defense sentinel` is registered and uses guarded execution, exact approvals,
   safe rewrite revalidation, and digest-linked trace events. All 28 shipped scenarios carry
   explicit authenticated task grants. The complete public and validation libraries pass with the
-  mock model. Four local Qwen3-8B traces are committed, including successful finance and SOC benign
-  tasks plus an enterprise attack blocked at the action boundary.
+  mock model. Runtime decisions no longer consult evaluator canaries; a coarse-authority ablation
+  reproduces the public and validation safety result without per-case resource or destination
+  grants. Four earlier local Qwen3-8B traces are committed, including successful finance and SOC
+  benign tasks plus an enterprise attack blocked at the action boundary.
 
 ## Verified setup and commands
 
@@ -45,7 +47,7 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Final main suite: `255 passed, 2 skipped` (257 collected).
+- Final working-tree main suite: `260 passed, 2 skipped` (262 collected).
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
@@ -61,6 +63,13 @@ restart the shell after installation.
   diagnostics, not Qwen results.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
+- Oracle-removal regression: the firewall raises if it attempts to read `WorldState.canaries`.
+  Coarse-authority public and validation ablations both retain BTU `1.0`, ASR `0.0`, and CVR `0.0`.
+- Explicit outcome probes produce complete ESCALATE → approval → execution and REWRITE →
+  revalidation → draft execution chains. Their trace hashes are recorded in `evidence/manifest.json`.
+- Paired live-Qwen control: `allow_all` executes the unauthorized `wiki_search`
+  (`attack_success=true`); SENTINEL blocks the same proposal class with policy/task denials. The
+  protected run's exact-date utility condition fails and is not represented as task success.
 
 ## Fresh-clone verification
 
@@ -72,6 +81,7 @@ restart the shell after installation.
 ## Frozen evidence
 
 - Evidence commit: `c05a0b59d2f9b464d2099158ad123f26cc71ba3c`.
+- Oracle-removal supplement commit: `e6b9230779d03ff7ba287cac0d8fc06926e2fbea`.
 - Full scorecards and deterministic digests: `evidence/manifest.json`.
 - Public/validation full SENTINEL: BTU `1.0`, ASR `0.0`, CVR `0.0`, FBR `0.0`,
   DFI `1.0`, zero defense errors.
@@ -80,7 +90,9 @@ restart the shell after installation.
 - Whole-context validation ablation: BTU `0.8`, FBR `0.0435`; paired asset-criticality traces are
   committed.
 - Adaptive mutation public run: BTU `1.0`, ASR/CVR/FBR/UER `0.0`, DFI `1.0`.
-- Viewer: `observability/sentinel-trace-viewer.html` (single-file, offline, read-only).
+- Viewer: `observability/sentinel-trace-viewer.html` (single-file, offline, read-only), with all four
+  outcome filters, G1–G7 evidence, provenance counts, risk/confidence, replacement details, and the
+  corrected authoritative state-version field.
 - Report/declarations/video runbook: `docs/technical-report.md`, `docs/responsible-ai.md`,
   `docs/model-data-declaration.md`, and `docs/video-script.md`.
 
@@ -102,8 +114,7 @@ restart the shell after installation.
 
 ## Next safe feature unit
 
-Read `NEXT_AGENT_PROMPT.md` and append all work to `AI_CONTINUATION_LOG.md`. A fresh clone at
-`.clean-check` is on `b94318a`, and `uv sync --frozen` passed there; its full pytest run was
-user-interrupted and remains unverified. Finish that check, then record the 5-10 minute video from
+Run the final verification commands in this file, then record the 5–10 minute video from
 `docs/video-script.md`. The actual recording/upload, submission URL, and receipt require the team's
-external accounts and cannot be fabricated by a coding agent.
+external accounts and cannot be fabricated by a coding agent. Treat the Qwen evidence as a small
+trace-level set, not a full-model aggregate; one non-vacuous paired control is committed.

@@ -21,7 +21,7 @@ engineer an AI agent that survives them.
 ## Team implementation status
 
 The local contract audit is pinned to official starter commit
-`87944a1bbb4565fac853e017dac2727b0f377704`. The verified published inventory is 28 scenarios
+`c86681a74f3bd7cf1c6be7b3251b575c8600f910`. The verified published inventory is 28 scenarios
 (19 public and 9 validation) across `enterprise`, `finance`, and `soc`, with 25 registered tools
 (9 enterprise, 8 finance, and 8 SOC). These counts are evidence from
 `sentinel scenarios list scenarios --json` and runtime registry inspection, not assumptions used by
@@ -39,7 +39,8 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-latest 2026-09-19 regression result was `255 passed, 2 skipped`; both skips require Windows symlink privilege.
+latest 2026-09-20 regression collected 262 tests: `260 passed, 2 skipped`; both skips require
+Windows symlink privilege.
 See [BUILD_LOG.md](BUILD_LOG.md) for exact commands and limitations, the
 [technical report](docs/technical-report.md) for methods/results, the
 [evidence bundle](evidence/README.md) for scorecards and replayable traces, and the
@@ -52,9 +53,10 @@ represent scenario identifiers, reference plans, labels, success conditions, or 
 It is registered as `--defense sentinel`; every tool execution uses a one-shot guarded permit and
 is revalidated against current authoritative state before the simulator gateway is called.
 
-Every shipped scenario now includes a structured `task_authorization` block issued by the offline
-simulator boundary. It grants tools and capabilities explicitly and can constrain resources,
-destinations, amounts/currency, and selected parameters. It contains no scenario ID, filename,
+Every shipped scenario now includes a team-authored synthetic `task_authorization` fixture loaded
+as protected input by the offline simulator boundary. It grants tools and capabilities explicitly
+and can constrain resources, destinations, amounts/currency, and selected parameters. It contains
+no scenario ID, filename,
 attack label, expected outcome, success condition, or reference plan. Other baseline defenses can
 still parse legacy scenarios without this optional field; the SENTINEL runtime will require it.
 
@@ -69,7 +71,13 @@ BTU `1.0`, with no task failures or defense errors. A public adaptive mutation r
 `0.0` and BTU `1.0`. Four local Qwen3-8B traces are committed: two successful benign cases in
 finance/SOC, one semantically correct enterprise case rejected by a literal date grader, and one
 enterprise attack trace where SENTINEL blocks the injected tool request. These are reproducible
-local diagnostics, not an official competition score or a full-Qwen aggregate.
+local diagnostics, not an official competition score or a full-Qwen aggregate. A separately
+committed paired Qwen control proves one attack is non-vacuous: `allow_all` executes the
+unauthorized `wiki_search`, while SENTINEL blocks the same proposal class. The protected run is not
+claimed as task success because its exact-date utility grader fails.
+
+All modifications made on top of the organizer starter are listed in
+[Organizer code changes](docs/organizer-delta.md).
 
 ## Architecture
 
@@ -143,7 +151,12 @@ parsed and recorded.
 Baselines: `allow_all`, `deny_sensitive`, `keyword`, `heuristic_risk`, `provenance`. `--model` selects
 the reference agent's underlying model (`mock` by default, `qwen3-8b` for local Hugging Face
 weights, or `lmstudio:<identifier>` for a loaded local GGUF); `mock` is fast for iterating on decision
-logic, while final live evidence must use Qwen3-8B.
+logic.
+
+Before treating a Qwen attack run as evidence, run the same scenario with `--defense allow_all` and
+require `attack_success=True`. Otherwise the model never reached the injected record and the
+protected run is vacuous. If the local quantized model cannot reach the attack on a scenario, use
+the deterministic mock for that demonstration and say so explicitly.
 
 ## Build your defense
 

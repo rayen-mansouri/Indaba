@@ -508,6 +508,7 @@ class SentinelFirewallDefense(Defense):
                 "outcome": outcome.value,
                 "reason_codes": list(evaluation.reason_codes),
                 "risk_score": evaluation.risk_score,
+                "confidence": evaluation.confidence,
                 "gates": [gate.model_dump(mode="json") for gate in evaluation.gate_results],
                 "rewrite_revalidation_gates": [
                     gate.model_dump(mode="json") for gate in rewrite_revalidation.gate_results
@@ -603,6 +604,7 @@ class SentinelFirewallDefense(Defense):
                     "outcome": Decision.BLOCK.value,
                     "reason_codes": [exc.reason_code],
                     "risk_score": 1.0,
+                    "confidence": 1.0,
                     "gates": [],
                     "provenance": {"node_count": len(graph.nodes), "dependency_count": 0},
                     "replacement": None,

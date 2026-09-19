@@ -69,9 +69,7 @@ def _depends_on(value: object, observed: ObservedContent) -> bool:
     # before matching so outbound sensitivity survives reversible transforms.
     for _, variant in transformed_text_variants(rendered):
         transformed = _comparable(variant)
-        if len(transformed) >= 8 and (
-            transformed in haystack or (len(haystack) >= 8 and haystack in transformed)
-        ):
+        if len(transformed) >= 8 and (transformed in haystack or (len(haystack) >= 8 and haystack in transformed)):
             return True
     return False
 

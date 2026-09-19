@@ -105,6 +105,15 @@
     .detail-meta { display: grid; grid-template-columns: 95px 1fr; gap: 6px 10px; font-size: 12px; margin-bottom: 14px; }
     .detail-meta dt { color: var(--muted); }
     .detail-meta dd { margin: 0; word-break: break-all; }
+    .decision-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 0 0 12px; }
+    .decision-fact { border: 1px solid var(--line); background: var(--panel-2); padding: 8px; border-radius: 6px; }
+    .decision-fact strong { display: block; font-size: 15px; }
+    .decision-fact span { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+    .gate-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 0 0 12px; }
+    .gate-table th, .gate-table td { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
+    .gate-table th { color: var(--muted); font-weight: 600; }
+    .rewrite-box { border-left: 3px solid var(--rewrite); padding: 8px 10px; background: #101a29; margin-bottom: 12px; }
+    .rewrite-box strong { color: var(--rewrite); }
     pre {
       margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 7px;
       background: var(--bg); color: #ced6df; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
@@ -174,6 +183,10 @@
         <button class="filter active" data-filter="all">All</button>
         <button class="filter" data-filter="security">Security path</button>
         <button class="filter" data-filter="decision">Decisions</button>
+        <button class="filter" data-filter="allow">Allow</button>
+        <button class="filter" data-filter="block">Block</button>
+        <button class="filter" data-filter="escalate">Escalate</button>
+        <button class="filter" data-filter="rewrite">Rewrite</button>
         <button class="filter" data-filter="execution">Execution</button>
         <button class="filter" data-filter="agent">Agent</button>
         <button class="filter" data-filter="evaluator">Outcome</button>
@@ -305,11 +318,11 @@
     function summarize(event) {
       const payload = event.payload || {};
       const decision = decisionValue(event);
-      if (event.type === "firewall_decision") return `${decision.toUpperCase()} · ${(payload.reason_codes || []).join(", ")}`;
+      if (event.type === "firewall_decision") return `${decision.toUpperCase()} · risk ${payload.risk_score ?? "?"} · confidence ${payload.confidence ?? "?"} · ${(payload.reason_codes || []).join(", ")}`;
       if (event.type === "action_proposal") return payload.original_proposal?.tool || payload.original_proposal?.type || "candidate action";
       if (event.type === "action_rewrite") return `replacement: ${payload.replacement?.tool || payload.replacement?.type}`;
       if (event.type === "executor_receipt") return `${payload.tool || payload.executed_action?.tool || "action"} · ${payload.succeeded ? "succeeded" : "failed"}`;
-      if (event.type === "state_verified") return `state v${payload.resulting_state_version ?? payload.authorized_state_version}`;
+      if (event.type === "state_verified") return `state v${payload.new_state_version ?? payload.authorized_state_version}`;
       if (event.type === "tool_request") return payload.tool || "tool request";
       if (event.type === "tool_result") return `${payload.tool || "tool"} · ${payload.succeeded === false ? "failed" : "ok"}`;
       if (event.type === "model_output") return payload.content || "model output";
@@ -342,6 +355,7 @@
       const categoryMatch = category === "all"
         || (category === "security" && securityTypes.has(event.type))
         || (category === "decision" && decisionTypes.has(event.type))
+        || (["allow", "block", "escalate", "rewrite"].includes(category) && decisionValue(event) === category)
         || (category === "execution" && executionTypes.has(event.type))
         || (category === "agent" && (event.actor === "agent" || event.actor === "user"))
         || (category === "evaluator" && event.actor === "evaluator");
@@ -374,6 +388,18 @@
       if (!event) return;
       const decision = decisionValue(event);
       const badge = decision ? `<span class="pill ${safe(decision)}">${safe(decision)}</span>` : "";
+      const payload = event.payload || {};
+      const gates = payload.gates || [];
+      const decisionPanel = event.type === "firewall_decision" ? `
+        <div class="decision-grid">
+          <div class="decision-fact"><strong>${safe(payload.risk_score ?? "—")}</strong><span>Risk severity</span></div>
+          <div class="decision-fact"><strong>${safe(payload.confidence ?? "—")}</strong><span>Fact confidence</span></div>
+          <div class="decision-fact"><strong>${safe(payload.provenance?.dependency_count ?? 0)} / ${safe(payload.provenance?.node_count ?? 0)}</strong><span>Dependencies / nodes</span></div>
+        </div>
+        ${payload.replacement ? `<div class="rewrite-box"><strong>Validated replacement</strong><pre>${safe(JSON.stringify(payload.replacement, null, 2))}</pre></div>` : ""}
+        <table class="gate-table"><thead><tr><th>Gate</th><th>Result</th><th>Risk basis / reasons</th></tr></thead><tbody>
+          ${gates.map((gate) => `<tr><td>${safe(gate.gate)}</td><td class="${gate.applicable && !gate.passed ? "block" : "allow"}">${safe(gate.applicable ? (gate.passed ? "pass" : "fail") : "n/a")}</td><td>${safe([...(gate.risk_basis || []), ...(gate.reason_codes || [])].join(" · ") || "—")}</td></tr>`).join("")}
+        </tbody></table>` : "";
       $("detail").innerHTML = `
         <h4>${safe(event.type)} ${badge}</h4>
         <dl class="detail-meta">
@@ -384,6 +410,7 @@
           <dt>Event ID</dt><dd>${safe(event.event_id)}</dd>
           <dt>Digest</dt><dd>${safe(event.payload?.action_digest || "—")}</dd>
         </dl>
+        ${decisionPanel}
         <pre>${safe(JSON.stringify(event.payload || {}, null, 2))}</pre>`;
     }
 
@@ -407,12 +434,17 @@
         const gates = decision?.payload?.gates || [];
         const receipts = chain.filter((event) => event.type === "executor_receipt").length;
         const digest = chain[0].payload.action_digest;
+        const risk = decision?.payload?.risk_score;
+        const confidence = decision?.payload?.confidence;
+        const provenance = decision?.payload?.provenance;
         return `<article class="chain">
           <div><div class="digest">${safe(digest)}</div><div class="gates">${gates.map((gate) =>
             `<span class="gate ${gate.applicable && !gate.passed ? "fail" : ""}">${safe(gate.gate)} ${gate.applicable ? (gate.passed ? "pass" : "fail") : "n/a"}</span>`
           ).join("")}</div></div>
           <div>${outcome ? `<span class="pill ${safe(outcome)}">${safe(outcome)}</span>` : '<span class="pill">pending</span>'}</div>
-          <div class="codes">${safe(codes.join(" · ") || "No failure reason codes")}</div>
+          <div class="codes">${safe(codes.join(" · ") || "No failure reason codes")}<br>
+            risk ${safe(risk ?? "—")} · confidence ${safe(confidence ?? "—")} · provenance ${safe(provenance?.dependency_count ?? 0)}/${safe(provenance?.node_count ?? 0)}
+          </div>
           <div class="count">${chain.length} events<br>${receipts} receipt${receipts === 1 ? "" : "s"}</div>
         </article>`;
       }).join("");

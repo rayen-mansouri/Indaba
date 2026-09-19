@@ -1,6 +1,6 @@
 # Model and data declaration
 
-Evidence date: 19 September 2026
+Evidence date: 20 September 2026
 
 ## Reference model
 
@@ -34,7 +34,8 @@ Mock results are labeled as controlled local diagnostics, not live-model perform
 - Inventory: 19 public and 9 validation scenarios across enterprise, finance, and SOC.
 - Fixtures: synthetic fictional organizations, people, accounts, email addresses, cases, alerts,
   payments, documents, notes, and memory entries.
-- Secret detection: deterministic synthetic canaries only.
+- Firewall sensitivity: runtime provenance plus trusted ToolSpec field labels. Synthetic canaries
+  are used only by the evaluator to score leakage and are not firewall inputs.
 - Attack content: repository-provided synthetic payloads and offline mutation variants.
 - External training/evaluation datasets: none.
 - AgentDojo: not run.

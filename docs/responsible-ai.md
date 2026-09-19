@@ -49,9 +49,10 @@ defense runs.
 ## Evaluation boundaries
 
 The full paired comparison uses a deterministic mock model so defenses receive identical candidate
-actions. Four live Qwen3-8B traces supplement, but do not replace, that controlled experiment. The
-28 scenarios are synthetic and repository-visible. Results do not support broad claims about other
-models, languages, users, domains, adaptive attackers, or production networks.
+actions. A small live Qwen3-8B trace set, including one non-vacuous `allow_all`/SENTINEL control,
+supplements but does not replace that controlled experiment. The 28 scenarios are synthetic and
+repository-visible. Results do not support broad claims about other models, languages, users,
+domains, adaptive attackers, or production networks.
 
 Two Windows symlink tests are skipped because this host lacks symlink privilege. AgentDojo was not
 run. MITRE ATLAS is used only as reporting taxonomy. All bypasses and task failures must remain in
