@@ -40,7 +40,12 @@ def test_fixture_symlink_escape_rejected(tmp_path: Path) -> None:
     (tmp_path / "fixtures").mkdir()
     outside = tmp_path.parent / "outside-fixture.json"
     outside.write_text('{"domain": "enterprise", "collections": {}}')
-    (tmp_path / "fixtures" / "link.json").symlink_to(outside)
+    try:
+        (tmp_path / "fixtures" / "link.json").symlink_to(outside)
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable")
+        raise
     scenario = build_scenario(fixture="fixtures/link.json")
     with pytest.raises(StateError, match="escapes"):
         WorldState.from_scenario(scenario, tmp_path)

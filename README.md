@@ -18,6 +18,31 @@ engineer an AI agent that survives them.
 - Scoring is jury-judged from your video, observability layer, technical report, and GitHub
   repository — not an automated benchmark. See [docs/scoring.md](docs/scoring.md).
 
+## Team implementation status
+
+The local contract audit is pinned to official starter commit
+`87944a1bbb4565fac853e017dac2727b0f377704`. The verified published inventory is 28 scenarios
+(19 public and 9 validation) across `enterprise`, `finance`, and `soc`, with 25 registered tools
+(9 enterprise, 8 finance, and 8 SOC). These counts are evidence from
+`sentinel scenarios list scenarios --json` and runtime registry inspection, not assumptions used by
+the defense.
+
+On Windows, install `uv`, restart the shell if the installer changes `PATH`, then run:
+
+```powershell
+uv sync
+uv run pytest
+uv run --project . pytest -q starter-kits/python-defense/tests
+uv run --project . pytest -q starter-kits/learned-monitor/tests
+uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance
+uv run sentinel replay artifacts/<group>/<run>.jsonl
+```
+
+GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
+2026-09-19 audit result was `190 passed, 2 skipped`; both skips require Windows symlink privilege.
+See [BUILD_LOG.md](BUILD_LOG.md) for the exact commands, trace ID, limitations, and current phase,
+and [docs/TEAM_HANDOFF.md](docs/TEAM_HANDOFF.md) for continuation notes.
+
 ## Architecture
 
 This repository is the simulator and reference tooling SENTINEL provides to every team: the

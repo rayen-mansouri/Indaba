@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from sentinel.sandbox.submission import validate_submission
 from tests.conftest import ROOT
 
@@ -18,7 +20,12 @@ def test_bad_submission_is_rejected(tmp_path: Path) -> None:
     (tmp_path / "sentinel-submission.yaml").write_text("name: Bad Name\nkind: defense\n")
     (tmp_path / ".env").write_text("TOKEN=x")
     (tmp_path / "config.py").write_text('api_key = "abcdefghijklmnopqrstuvwxyz"\n')
-    (tmp_path / "escape").symlink_to("/etc")
+    try:
+        (tmp_path / "escape").symlink_to("/etc")
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314:
+            pytest.skip("Windows symlink privilege is unavailable")
+        raise
     report = validate_submission(str(tmp_path))
     result = statuses(report)
     assert not report.ok

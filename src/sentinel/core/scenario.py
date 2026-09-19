@@ -6,7 +6,7 @@ import hashlib
 import json
 import random
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Annotated, Any, Literal, Self
 
 import yaml
@@ -19,6 +19,16 @@ ID_PATTERN = r"^[a-z][a-z0-9_]{2,79}$"
 SEGMENT_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"
 TARGET_PATTERN = rf"^{SEGMENT_PATTERN}/{SEGMENT_PATTERN}/[a-z][a-z0-9_]{{0,63}}$"
 MAX_SCENARIO_BYTES = 256_000
+
+
+def _is_absolute_on_any_supported_platform(value: str) -> bool:
+    """Reject absolute paths using either POSIX or Windows syntax.
+
+    Scenario files are portable inputs.  Checking only the host platform's
+    ``Path`` semantics lets a POSIX absolute path through on Windows (and a
+    Windows drive path through on POSIX) before the benchmark-root check.
+    """
+    return PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute()
 
 
 class ScenarioError(ValueError):
@@ -281,7 +291,8 @@ class Scenario(_Strict):
 
     @model_validator(mode="after")
     def _cross_checks(self) -> Self:
-        if Path(self.fixture).is_absolute() or ".." in Path(self.fixture).parts:
+        fixture = Path(self.fixture)
+        if _is_absolute_on_any_supported_platform(self.fixture) or ".." in fixture.parts:
             raise ValueError("fixture must be a relative path inside the benchmark root (no '..')")
         if not self.fixture.endswith(".json"):
             raise ValueError("fixture must be a .json file")
