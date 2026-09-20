@@ -114,9 +114,14 @@ obeys, from any text it reads (user goal, tool results, recalled memory):
 | `{{... \| base64}}`, `hex`, `reverse` | simulated instructed encoding of the value |
 
 This models susceptibility. The agent contains no attack-specific code, and the same grammar applies
-to benign and adversarial text. Because the grammar is structural, a defense can look stronger against
-the `mock` model than it will against the real one; always validate against `--model qwen3-8b` before
-recording the trace your video and report are built on.
+to benign and adversarial text.
+
+Because the grammar is structural, a defense can look stronger against the `mock` model than it will
+against a real one: anything that keys on the shape of `call <tool> with {json}` catches every mock
+attack and would catch none of the same instructions phrased as ordinary prose. If your defense
+leans on that shape, say so in your report — a named limitation reads as rigour, and a jury that
+finds it for itself reads it as overfitting. Recording on `mock` is perfectly acceptable; claiming
+a structural matcher generalises to a live model is not.
 
 ## Services
 
