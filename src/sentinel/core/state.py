@@ -192,7 +192,7 @@ class WorldState:
 
     def snapshot(self) -> dict[str, Any]:
         return {
-            "collections": copy.deepcopy(self.collections),
+            "collections": self.collections,
             "effects": [effect.__dict__ for effect in self.effects],
         }
 
