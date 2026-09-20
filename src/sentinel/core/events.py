@@ -78,9 +78,10 @@ class EventLog:
         self._clock = clock
         self._events: list[Event] = []
         self._sink_path = sink_path
+        self._sink_handle = None
         if sink_path is not None:
             sink_path.parent.mkdir(parents=True, exist_ok=True)
-            sink_path.touch(exist_ok=False)
+            self._sink_handle = sink_path.open("a", encoding="utf-8", newline="\n")
 
     def append(
         self,
@@ -106,13 +107,15 @@ class EventLog:
             policy=policy or {},
         )
         self._events.append(event)
-        if self._sink_path is not None:
-            # Opening for each line makes the event visible immediately and avoids a leaked
-            # long-lived handle if a model/runtime error interrupts the run.
-            with self._sink_path.open("a", encoding="utf-8", newline="\n") as handle:
-                handle.write(event_to_json(event) + "\n")
-                handle.flush()
+        if self._sink_handle is not None:
+            self._sink_handle.write(event_to_json(event) + "\n")
+            self._sink_handle.flush()
         return event
+
+    def close(self) -> None:
+        if self._sink_handle is not None:
+            self._sink_handle.close()
+            self._sink_handle = None
 
     def __iter__(self) -> Iterator[Event]:
         return iter(self._events)
