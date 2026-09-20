@@ -826,7 +826,13 @@ class SentinelFirewallDefense(Defense):
 
     def _state_digest(self) -> str:
         assert self._state is not None
-        encoded = json.dumps(self._state.snapshot(), sort_keys=True, separators=(",", ":")).encode()
+        # Serialize authoritative state synchronously without exposing its mutable containers through
+        # WorldState.snapshot(), whose public contract remains a detached copy.
+        digest_view = {
+            "collections": self._state.collections,
+            "effects": [effect.__dict__ for effect in self._state.effects],
+        }
+        encoded = json.dumps(digest_view, sort_keys=True, separators=(",", ":")).encode()
         return hashlib.sha256(encoded).hexdigest()
 
     def _emit_execution(

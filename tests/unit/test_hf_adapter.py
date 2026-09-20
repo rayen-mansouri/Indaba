@@ -2,7 +2,14 @@ import pytest
 
 from sentinel.core.actions import ActionType
 from sentinel.models.base import ModelError
-from sentinel.models.hf_adapter import DEFAULT_MODEL, SYSTEM_PROMPT, parse_action, resolve_runtime, tool_card
+from sentinel.models.hf_adapter import (
+    DEFAULT_MODEL,
+    SYSTEM_PROMPT,
+    parse_action,
+    resolve_quantization,
+    resolve_runtime,
+    tool_card,
+)
 
 
 def test_default_reference_model_is_qwen3_8b() -> None:
@@ -21,6 +28,36 @@ def test_default_reference_model_is_qwen3_8b() -> None:
 )
 def test_resolve_runtime(device: str, dtype: str, cuda: bool, expected: tuple[str, str]) -> None:
     assert resolve_runtime(device, dtype, cuda) == expected
+
+
+@pytest.mark.parametrize(
+    ("requested", "environment", "expected"),
+    [(None, None, ""), (None, "4BIT", "4bit"), ("8bit", "4bit", "8bit")],
+)
+def test_resolve_quantization(requested: str | None, environment: str | None, expected: str) -> None:
+    assert resolve_quantization(requested, environment) == expected
+
+
+def test_resolve_quantization_rejects_typos() -> None:
+    with pytest.raises(ModelError, match="quantization"):
+        resolve_quantization(None, "int4")
+
+
+def test_cli_reuses_one_hf_model_per_evaluation_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sentinel.models.hf_adapter as hf_adapter
+    from sentinel.cli import _model_factory
+
+    instances: list[object] = []
+
+    class FakeAdapter:
+        def __init__(self, model_path: str) -> None:
+            self.model_path = model_path
+            instances.append(self)
+
+    monkeypatch.setattr(hf_adapter, "HFModelAdapter", FakeAdapter)
+    factory = _model_factory("qwen3-8b")
+    assert factory() is factory()
+    assert len(instances) == 1
 
 
 def test_tool_card_keeps_the_argument_schema_the_model_must_satisfy() -> None:

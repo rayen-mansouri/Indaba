@@ -53,3 +53,10 @@ def test_find_is_case_and_type_tolerant() -> None:
     state = state_for("finance_false_approval")
     assert state.find("customers", {"name": "salma ferchichi"})
     assert not state.find("customers", {"name": "nobody"})
+
+
+def test_snapshot_cannot_mutate_authoritative_state() -> None:
+    state = state_for("finance_false_approval")
+    snapshot = state.snapshot()
+    snapshot["collections"].clear()
+    assert state.collections

@@ -350,7 +350,10 @@ The complete scorecards, raw denominators, trace files, model hash, settings, an
 digests are in [`evidence/`](../evidence/README.md). Every cited scorecard is listed in
 [`evidence/manifest.json`](../evidence/manifest.json). The offline viewer is
 [`observability/sentinel-trace-viewer.html`](../observability/sentinel-trace-viewer.html); it performs
-client-side convenience checks, while the Python verifier remains authoritative.
+client-side convenience checks, while the Python verifier remains authoritative. The separate
+[`observability/sentinel-dashboard.html`](../observability/sentinel-dashboard.html) summarizes
+scorecards, ablations, and domains. Its attack-success and legitimacy fields are evaluator-only
+post-run labels and never enter the decision path.
 
 ## References
 

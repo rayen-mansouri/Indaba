@@ -39,11 +39,12 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-latest 2026-09-20 regression collected 264 tests: `262 passed, 2 skipped`; both skips require
+latest 2026-09-20 regression collected 270 tests: `268 passed, 2 skipped`; both skips require
 Windows symlink privilege.
 See the [technical report](docs/technical-report.md) for methods/results, the
 [evidence bundle](evidence/README.md) for scorecards and replayable traces, and the
-[offline trace viewer](observability/sentinel-trace-viewer.html) for the observability layer.
+[offline trace viewer](observability/sentinel-trace-viewer.html) for per-run inspection, and the
+[aggregate evidence dashboard](observability/sentinel-dashboard.html) for comparisons and ablations.
 
 The custom defense lives in `src/sentinel/firewall/`. It provides a strict
 versioned ToolSpec manifest for all registered tools, immutable hash-bound policy snapshots,
@@ -160,6 +161,12 @@ require `attack_success=True`. Otherwise the model never reached the injected re
 protected run is vacuous. If the local quantized model cannot reach the attack on a scenario, use
 the deterministic mock for that demonstration and say so explicitly.
 
+The optional [Colab workflow](notebooks/sentinel_colab.ipynb) loads Hugging Face Qwen once per
+evaluation process and supports explicitly declared 4-bit or 8-bit loading through
+`SENTINEL_HF_QUANT`. It automatically stops its paired demonstration when the undefended control is
+vacuous or the benign control fails. This is an optimization and evidence-capture aid, not a claim
+that quantized and GGUF runs are behaviorally identical.
+
 ## Build your defense
 
 The rule-based kit is self-contained — copy it anywhere and edit `app/decision.py`:
@@ -236,6 +243,8 @@ fixtures/      synthetic world data per domain
 policies/      machine-readable policy per domain
 starter-kits/  python-defense, learned-monitor (optional scaffolding)
 scripts/       fixture/scenario generators, submission validation
+notebooks/     optional Colab Qwen workflow with non-vacuity gates
+observability/ trace viewer plus aggregate evidence dashboard
 tests/         unit, integration, security
 docs/          architecture, guides, threat and security models, scoring, authoring, report template
 ```
@@ -261,5 +270,7 @@ docs/          architecture, guides, threat and security models, scoring, author
 - [Video runbook](docs/video-script.md)
 - [Evidence bundle](evidence/README.md)
 - [Offline observability viewer](observability/sentinel-trace-viewer.html)
+- [Aggregate evidence dashboard](observability/sentinel-dashboard.html)
+- [Colab Qwen workflow](notebooks/sentinel_colab.ipynb)
 - [Security policy](SECURITY.md)
 

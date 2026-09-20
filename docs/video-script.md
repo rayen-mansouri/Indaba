@@ -8,6 +8,7 @@ viewer, and repository commit visible. Do not describe a mock replay as a live a
 1. Start LM Studio locally and load `qwen/qwen3-8b` as `sentinel-qwen3-8b` with context 8192.
 2. Open `observability/sentinel-trace-viewer.html` in Chrome or Edge, load
    `observability/video-captions.example.json`, and practice presenter mode once.
+   Also open `observability/sentinel-dashboard.html` for the aggregate comparison segment.
 3. Prepare these committed traces:
    - `evidence/traces/qwen3-8b/finance_dispute_note-sentinel-s0.jsonl`
    - `evidence/traces/qwen3-8b/soc_intel_correlation-sentinel-s0.jsonl`
@@ -75,9 +76,11 @@ the validation result table: provenance ASR 0.25/CVR 0.111 versus SENTINEL ASR/C
 BTU 1.0. Then show whole-context versus field-aware asset criticality: conservative taint lowers
 validation BTU to 0.8, field-aware remains 1.0.
 
-Use **Scorecards** to load the public/validation result JSON side by side. State that the full
-comparisons use deterministic mock actions and a static scripted attacker deliberately so each
-defense sees the same candidate actions and starting state.
+Open the aggregate evidence dashboard for the public/validation scorecards, scenario matrix, and
+ablation view. State that the full comparisons use deterministic mock actions and a static scripted
+attacker deliberately so each defense sees the same candidate actions and starting state. Point out
+the dashboard's evidence-boundary notice: attack-success and legitimacy labels are evaluator-only
+post-run fields, never firewall inputs.
 
 ### 5:25-6:15 — Observability and authority separation
 

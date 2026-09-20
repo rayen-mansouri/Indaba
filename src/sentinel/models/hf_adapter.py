@@ -77,6 +77,15 @@ def resolve_runtime(device: str, dtype: str, cuda_available: bool) -> tuple[str,
     return resolved_device, resolved_dtype
 
 
+def resolve_quantization(requested: str | None, environment: str | None) -> str:
+    """Resolve and validate the optional bitsandbytes loading mode."""
+    value = requested or environment or ""
+    quantization = value.strip().lower()
+    if quantization not in {"", "4bit", "8bit"}:
+        raise ModelError("quantization must be '4bit', '8bit', or unset")
+    return quantization
+
+
 def parse_action(text: str) -> CandidateAction:
     """Extract the first complete JSON object from model output and validate it as an action."""
     body = THINK_TAIL.sub("", THINK_BLOCK.sub("", text))
@@ -110,7 +119,7 @@ class HFModelAdapter(ModelAdapter):
         except ImportError as exc:  # pragma: no cover - depends on optional extra
             raise ModelError("transformers is not installed; run `uv sync --extra hf`") from exc
         resolved_device, resolved_dtype = resolve_runtime(device, dtype, torch.cuda.is_available())
-        quant = (quantize or os.environ.get("SENTINEL_HF_QUANT", "")).lower()
+        quant = resolve_quantization(quantize, os.environ.get("SENTINEL_HF_QUANT"))
         self._tokenizer: Any = AutoTokenizer.from_pretrained(model_path, local_files_only=local_files_only)
         if quant in ("4bit", "8bit"):
             # Memory-constrained runtime (e.g. a 16 GB Colab T4). Same weights, quantized on load;

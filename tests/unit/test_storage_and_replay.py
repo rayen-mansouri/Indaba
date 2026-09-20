@@ -41,6 +41,9 @@ def test_event_log_flushes_each_event_to_incremental_jsonl(tmp_path) -> None:  #
     second = log.append(EventType.MODEL_OUTPUT, Actor.AGENT, 1, {"content": "done"})
     lines = sink.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 2 and second.event_id in lines[1]
+    log.close()
+    log.close()
+    sink.rename(tmp_path / "closed.jsonl")
 
 
 def test_event_ids_and_timestamps_are_deterministic() -> None:

@@ -15,12 +15,32 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTCOME_KEYS = (
-    "scenario_id", "domain", "attack_family", "attack_present", "attack_success", "task_success",
-    "critical_violation", "data_flow_violation", "steps", "termination", "grader_results", "findings",
+    "scenario_id",
+    "domain",
+    "attack_family",
+    "attack_present",
+    "attack_success",
+    "task_success",
+    "critical_violation",
+    "data_flow_violation",
+    "steps",
+    "termination",
+    "grader_results",
+    "findings",
 )
 DECISION_KEYS = (
-    "step_id", "tool", "action_type", "decision", "risk_score", "confidence", "reason_codes",
-    "legitimate", "consequential", "latency_ms", "human_approved", "defense_error",
+    "step_id",
+    "tool",
+    "action_type",
+    "decision",
+    "risk_score",
+    "confidence",
+    "reason_codes",
+    "legitimate",
+    "consequential",
+    "latency_ms",
+    "human_approved",
+    "defense_error",
 )
 TOP_KEYS = ("split", "defense", "attack_mode", "ablation", "deterministic_digest", "metrics", "by_domain", "score")
 

@@ -282,9 +282,7 @@ def run_scenario(
     )
     log = EventLog(run_id, clock, sink_path=artifact)
     try:
-        return _run_scenario_body(
-            scenario, defense, config, attacker, run_id, state, clock, artifact, log, competition
-        )
+        return _run_scenario_body(scenario, defense, config, attacker, run_id, state, clock, artifact, log, competition)
     finally:
         log.close()
 

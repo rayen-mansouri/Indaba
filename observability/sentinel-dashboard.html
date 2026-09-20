@@ -44,6 +44,7 @@ td.c,th.c{text-align:center}
 .cell.sel{outline:2px solid var(--acc)}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:10px 16px;color:var(--mut);cursor:pointer}
 .drop.over{border-color:var(--acc);color:var(--tx)}
+.notice{border-left:3px solid var(--acc);background:#5ab0ff10;padding:10px 12px;border-radius:6px;color:var(--mut)}
 .lens{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .lens div{background:var(--p2);border-radius:8px;padding:10px}
 .lens b{display:block;margin-bottom:4px}
@@ -53,7 +54,7 @@ small{color:var(--mut)}
 </head>
 <body>
 <header>
-  <h1><span>SENTINEL</span> Dashboard</h1>
+  <h1><span>SENTINEL</span> Aggregate Evidence</h1>
   <nav id="nav"></nav>
   <div class="sp"></div>
   <select id="runsel" title="Scorecard"></select>
@@ -153,13 +154,17 @@ function vOverview() {
   const illeg = decs.filter(d => d.legitimate === false), leg = decs.filter(d => d.legitimate);
   const split2 = `<small>Illegitimate actions: ${illeg.length} (${illeg.filter(d=>d.decision==='allow').length} allowed) · Legitimate: ${leg.length} (${leg.filter(d=>d.decision!=='allow').length} not allowed)</small>`;
 
-  return `<div class="grid kpis">${kp}</div>
+  return `<div class="notice"><b>Evidence boundary:</b> attack-success, legitimacy, grader, and
+  policy-finding fields are added by the evaluator after execution. They are never available to
+  SENTINEL's decision path. Use the trace viewer for a single run's trusted proposal → decision →
+  receipt → verified-state chain.</div>
+  <div class="grid kpis" style="margin-top:14px">${kp}</div>
   <div class="card" style="margin-top:14px"><h3>Jury rubric lens (docs/scoring.md → Video &amp; observability)</h3>${lens}</div>
   <div class="grid two" style="margin-top:14px">
     <div class="card"><h3>By domain</h3><div class="scroll"><table><tr><th>domain</th><th class="c">n</th><th class="c">BTU</th><th class="c">ASR</th><th class="c">CVR</th><th class="c">FBR</th><th class="c">TUI</th><th class="c">p95 ms</th></tr>${dom}</table></div></div>
     <div class="card"><h3>Attack-family outcome</h3>${famBars}</div>
     <div class="card"><h3>Decision mix</h3>${stack}<div style="margin-top:8px">${split2}</div></div>
-    <div class="card"><h3>Calibration (risk vs. observed illegitimacy)</h3>${reliability(decs)}<small>Dots on the diagonal = well calibrated. Dot size = #decisions.</small></div>
+    <div class="card"><h3>Severity-score alignment (post-run diagnostic)</h3>${reliability(decs)}<small>This compares deterministic policy severity with evaluator-only legitimacy labels; it is not a probabilistic calibration claim. Dot size = #decisions.</small></div>
   </div>`;
 }
 function reliability(decs) {
@@ -219,7 +224,7 @@ function detail() {
   const fi = (o.findings || []).map(f => `<div class="bad"><small>${esc(typeof f === 'string' ? f : JSON.stringify(f))}</small></div>`).join('');
   return `<div class="card"><h3>${esc(o.scenario_id)} · ${esc(r.label)}</h3>
     <p>${o.attack_present ? `Attack family <b>${esc(o.attack_family)}</b>` : 'Benign'} · task success <b class="${o.task_success ? 'good' : 'bad'}">${o.task_success}</b> · attack success <b class="${o.attack_success ? 'bad' : 'good'}">${o.attack_success}</b> · steps ${o.steps} · ${esc(o.termination)}</p>
-    <div class="scroll"><table><tr><th>step</th><th>tool</th><th>decision</th><th>risk</th><th>conf</th><th>reason codes</th><th>label</th><th>ms</th></tr>${rows}</table></div>
+    <div class="scroll"><table><tr><th>step</th><th>tool</th><th>decision</th><th>risk</th><th>conf</th><th>reason codes</th><th>post-run label</th><th>ms</th></tr>${rows}</table></div>
     ${gr ? `<h3 style="margin-top:12px">Success conditions</h3>${gr}` : ''}${fi ? `<h3 style="margin-top:12px">Policy findings</h3>${fi}` : ''}</div>`;
 }
 

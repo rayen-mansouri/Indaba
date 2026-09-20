@@ -191,13 +191,17 @@ class WorldState:
         return any(effect.name == name for effect in self.effects)
 
     def snapshot(self) -> dict[str, Any]:
-        # Single call site (firewall/runtime.py::_state_digest) immediately json.dumps()s this
-        # and never mutates it, so the defensive deepcopy of the whole world state was pure
-        # overhead on every guarded tool call. No copy needed for a read-only serialize.
-        return {
-            "collections": self.collections,
-            "effects": [effect.__dict__ for effect in self.effects],
-        }
+        """Return a detached view suitable for hashing, inspection, or replay.
+
+        The firewall currently serializes this immediately, but keeping the public method detached
+        prevents a caller from mutating authoritative state through a value named ``snapshot``.
+        """
+        return copy.deepcopy(
+            {
+                "collections": self.collections,
+                "effects": [effect.__dict__ for effect in self.effects],
+            }
+        )
 
 
 def loose_equal(left: Any, right: Any) -> bool:
