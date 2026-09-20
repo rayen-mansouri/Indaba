@@ -2,7 +2,7 @@
 
 ## Current state
 
-- Active phase: Phase 5/6 — defense, evidence supplement, observability, and CI complete. External
+- Active phase: Phase 5/6 — defense, evidence supplement, Mission Control observability, and CI complete. External
   recording/submission remain.
 - Official starter revision: `c86681a74f3bd7cf1c6be7b3251b575c8600f910`.
 - Remotes: `upstream` is `Skan22/Sentinel_Starter_Kit`; `origin` is `rayen-mansouri/Indaba`.
@@ -12,7 +12,8 @@
   explicit authenticated task grants. The complete public and validation libraries pass with the
   mock model. Runtime decisions no longer consult evaluator canaries; a coarse-authority ablation
   reproduces the public and validation safety result without per-case resource or destination
-  grants. Four earlier local Qwen3-8B traces are committed, including successful finance and SOC
+  grants, with lower validation utility recorded honestly. Missing task authority now produces a
+  traced fail-closed decision instead of an evaluator crash. Four earlier local Qwen3-8B traces are committed, including successful finance and SOC
   benign tasks plus an enterprise attack blocked at the action boundary.
 
 ## Verified setup and commands
@@ -47,12 +48,12 @@ restart the shell after installation.
 
 ## Test evidence
 
-- Final working-tree main suite: `260 passed, 2 skipped` (262 collected).
+- Final working-tree main suite: `262 passed, 2 skipped` (264 collected).
 - `starter-kits/python-defense`: `6 passed`.
 - `starter-kits/learned-monitor`: `2 passed`.
 - Ruff lint: pass.
 - Ruff format check: pass after formatting.
-- mypy: pass, 65 source files.
+- mypy: pass, 76 source files.
 - Firewall foundation: 8 focused tests pass; Ruff and mypy pass across 69 source files.
 - Firewall core: 33 focused tests pass; Ruff passes; mypy passes across 73 source files.
 - Task-authority fixture unit: all 28 scenarios validate; 22 focused scenario/CLI tests pass; full
@@ -64,7 +65,12 @@ restart the shell after installation.
 - Skips: two symlink-escape tests on Windows error 1314 (symlink privilege unavailable). They must
   be rerun on a symlink-capable clean host before final evidence freeze.
 - Oracle-removal regression: the firewall raises if it attempts to read `WorldState.canaries`.
-  Coarse-authority public and validation ablations both retain BTU `1.0`, ASR `0.0`, and CVR `0.0`.
+  Coarse-authority public and validation ablations both retain BTU `1.0`, ASR `0.0`, and CVR `0.0`,
+  but validation FBR is `0.0435`, TUI is `0.9333`, and `enterprise_val_encoded_exfil` fails its task.
+- Missing `task_authorization` fails closed with `TASK_AUTH_MISSING`, no tool execution, and a
+  replayable trace; it no longer raises an uncaught `ValueError`.
+- Incremental event output flushes every JSONL record. Official replay accepted a newly generated
+  validation encoded-exfil trace from `eval-validation-sentinel-20260920T143528Z`.
 - Explicit outcome probes produce complete ESCALATE → approval → execution and REWRITE →
   revalidation → draft execution chains. Their trace hashes are recorded in `evidence/manifest.json`.
 - Paired live-Qwen control: `allow_all` executes the unauthorized `wiki_search`
@@ -90,9 +96,14 @@ restart the shell after installation.
 - Whole-context validation ablation: BTU `0.8`, FBR `0.0435`; paired asset-criticality traces are
   committed.
 - Adaptive mutation public run: BTU `1.0`, ASR/CVR/FBR/UER `0.0`, DFI `1.0`.
-- Viewer: `observability/sentinel-trace-viewer.html` (single-file, offline, read-only), with all four
-  outcome filters, G1–G7 evidence, provenance counts, risk/confidence, replacement details, and the
-  corrected authoritative state-version field.
+- Viewer: `observability/sentinel-trace-viewer.html` (single-file, offline Mission Control), with a
+  decision story, live-growing trace follow, presenter playback/captions, paired-run comparison,
+  multi-scorecard dashboard, G1–G7 evidence, rewrite revalidation, provenance counts,
+  risk/confidence labels, and the corrected authoritative state-version field. Real rewrite, paired
+  Qwen, and validation scorecard artifacts were browser-tested with no console errors.
+- Post-run block attribution: 20/29 blocks are outside organizer `allowed_tools`, while 9/29 are
+  within that broad boundary and rely on finer SENTINEL gates; all 29 are evaluator-labeled
+  illegitimate and zero legitimate. This organizer/grader metadata is analysis-only.
 - Report/declarations/video runbook: `docs/technical-report.md`, `docs/responsible-ai.md`,
   `docs/model-data-declaration.md`, and `docs/video-script.md`.
 

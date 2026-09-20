@@ -3,503 +3,151 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SENTINEL Trace Viewer</title>
+  <title>SENTINEL Mission Control</title>
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #0b0d10;
-      --panel: #12161b;
-      --panel-2: #171c22;
-      --line: #2a323c;
-      --text: #eef2f6;
-      --muted: #98a4b3;
-      --accent: #63d6b5;
-      --allow: #62d394;
-      --block: #ff7373;
-      --escalate: #f5bf61;
-      --rewrite: #71a7ff;
-      --danger-bg: #2a1719;
-      --ok-bg: #12231d;
+      color-scheme: dark light;
+      --bg: #071018; --bg-2: #0a1520; --panel: rgba(14,29,42,.88); --panel-solid: #0e1d2a;
+      --panel-2: #132536; --line: rgba(152,184,209,.18); --line-strong: rgba(152,184,209,.34);
+      --text: #f5f8fb; --muted: #91a7b8; --accent: #4de3c1; --accent-2: #45a7ff;
+      --allow: #5ce39a; --block: #ff6b79; --escalate: #ffc857; --rewrite: #7ca7ff;
+      --shadow: 0 22px 80px rgba(0,0,0,.28); --radius: 18px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#eef4f7; --bg-2:#e4edf2; --panel:rgba(255,255,255,.88); --panel-solid:#fff; --panel-2:#f4f8fa; --line:rgba(19,48,65,.13); --line-strong:rgba(19,48,65,.25); --text:#102330; --muted:#5e7484; --shadow:0 20px 60px rgba(35,63,79,.12); }
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
-    button, input { font: inherit; }
-    button { cursor: pointer; }
-    .topbar {
-      min-height: 72px; padding: 14px 24px; border-bottom: 1px solid var(--line);
-      display: flex; align-items: center; justify-content: space-between; gap: 18px;
-      position: sticky; top: 0; z-index: 10; background: rgba(11, 13, 16, .96);
-    }
-    .brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-    .brand h1 { margin: 0; font-size: 21px; letter-spacing: .08em; }
-    .brand span { color: var(--muted); font-size: 13px; white-space: nowrap; }
-    .actions { display: flex; gap: 8px; }
-    .button {
-      border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
-      border-radius: 7px; padding: 9px 13px;
-    }
-    .button.primary { color: #07100d; background: var(--accent); border-color: var(--accent); font-weight: 700; }
-    .button:hover { border-color: var(--muted); }
-    #fileInput { display: none; }
-    .shell { max-width: 1540px; margin: 0 auto; padding: 22px 24px 40px; }
-    .dropzone {
-      border: 1px dashed #536171; border-radius: 10px; min-height: 310px; padding: 42px;
-      display: grid; place-items: center; text-align: center; background: var(--panel);
-    }
-    .dropzone.dragging { border-color: var(--accent); background: #101c19; }
-    .dropzone h2 { margin: 0 0 10px; font-size: 24px; }
-    .dropzone p { color: var(--muted); max-width: 620px; line-height: 1.6; }
-    .dropzone code { color: var(--accent); }
-    .hidden { display: none !important; }
-    .runline { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
-    .runline h2 { margin: 0 0 5px; font-size: 20px; word-break: break-word; }
-    .runline p { margin: 0; color: var(--muted); font-size: 13px; }
-    .integrity {
-      border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; min-width: 230px;
-      font-size: 13px; background: var(--ok-bg); color: var(--allow);
-    }
-    .integrity.bad { background: var(--danger-bg); color: var(--block); }
-    .stats {
-      display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 9px; margin-bottom: 18px;
-    }
-    .stat { border-top: 2px solid var(--line); padding: 11px 12px; background: var(--panel); min-height: 78px; }
-    .stat strong { display: block; font-size: 23px; margin-bottom: 3px; }
-    .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-    .stat.emphasis { border-top-color: var(--accent); }
-    .toolbar {
-      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid var(--line);
-      background: var(--panel); padding: 10px; border-radius: 8px; margin-bottom: 14px;
-    }
-    .filter {
-      padding: 7px 10px; border: 1px solid transparent; background: transparent; color: var(--muted);
-      border-radius: 6px;
-    }
-    .filter.active { color: var(--text); background: var(--panel-2); border-color: var(--line); }
-    .search {
-      margin-left: auto; min-width: 260px; border: 1px solid var(--line); background: var(--bg);
-      color: var(--text); padding: 8px 10px; border-radius: 6px; outline: none;
-    }
-    .search:focus { border-color: var(--accent); }
-    .layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, .75fr); gap: 14px; }
-    .section { border: 1px solid var(--line); background: var(--panel); border-radius: 9px; overflow: hidden; }
-    .section-head {
-      display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
-      border-bottom: 1px solid var(--line); background: var(--panel-2);
-    }
-    .section-head h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .07em; }
-    .section-head span { color: var(--muted); font-size: 12px; }
-    .timeline { max-height: 66vh; overflow: auto; }
-    .event {
-      width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent;
-      color: var(--text); text-align: left; padding: 10px 13px; display: grid;
-      grid-template-columns: 48px 96px minmax(130px, 1fr) minmax(180px, 1.5fr); gap: 10px; align-items: center;
-    }
-    .event:hover, .event.selected { background: var(--panel-2); }
-    .seq { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
-    .actor { color: var(--muted); font-size: 12px; }
-    .etype { font-weight: 650; font-size: 13px; word-break: break-word; }
-    .summary { color: #c2cad4; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .detail { padding: 14px; max-height: 66vh; overflow: auto; }
-    .detail h4 { margin: 0 0 11px; font-size: 17px; }
-    .detail-meta { display: grid; grid-template-columns: 95px 1fr; gap: 6px 10px; font-size: 12px; margin-bottom: 14px; }
-    .detail-meta dt { color: var(--muted); }
-    .detail-meta dd { margin: 0; word-break: break-all; }
-    .decision-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 0 0 12px; }
-    .decision-fact { border: 1px solid var(--line); background: var(--panel-2); padding: 8px; border-radius: 6px; }
-    .decision-fact strong { display: block; font-size: 15px; }
-    .decision-fact span { color: var(--muted); font-size: 10px; text-transform: uppercase; }
-    .gate-table { width: 100%; border-collapse: collapse; font-size: 11px; margin: 0 0 12px; }
-    .gate-table th, .gate-table td { border-bottom: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
-    .gate-table th { color: var(--muted); font-weight: 600; }
-    .rewrite-box { border-left: 3px solid var(--rewrite); padding: 8px 10px; background: #101a29; margin-bottom: 12px; }
-    .rewrite-box strong { color: var(--rewrite); }
-    pre {
-      margin: 0; padding: 12px; overflow: auto; border: 1px solid var(--line); border-radius: 7px;
-      background: var(--bg); color: #ced6df; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
-      white-space: pre-wrap; word-break: break-word;
-    }
-    .pill {
-      display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px;
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
-      border: 1px solid currentColor;
-    }
-    .allow { color: var(--allow); } .block { color: var(--block); }
-    .escalate { color: var(--escalate); } .rewrite { color: var(--rewrite); }
-    .chains { margin-top: 14px; }
-    .chain-list { display: grid; gap: 1px; background: var(--line); }
-    .chain { background: var(--panel); padding: 12px 14px; display: grid; grid-template-columns: 190px 110px 1fr 110px; gap: 12px; }
-    .digest { font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--accent); }
-    .codes { color: #c2cad4; font-size: 12px; }
-    .gates { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-    .gate { border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; color: var(--muted); font-size: 10px; }
-    .gate.fail { color: var(--block); border-color: #753d43; }
-    .chain .count { color: var(--muted); font-size: 12px; text-align: right; }
-    .empty { padding: 26px 14px; color: var(--muted); text-align: center; }
-    .error-list { margin: 8px 0 0; padding-left: 18px; color: var(--block); }
-    @media (max-width: 1050px) {
-      .stats { grid-template-columns: repeat(3, 1fr); }
-      .layout { grid-template-columns: 1fr; }
-      .detail, .timeline { max-height: 48vh; }
-      .chain { grid-template-columns: 1fr 100px; }
-      .chain .codes { grid-column: 1 / -1; }
-    }
-    @media (max-width: 700px) {
-      .topbar, .runline { align-items: flex-start; flex-direction: column; }
-      .shell { padding: 16px 12px 30px; }
-      .stats { grid-template-columns: repeat(2, 1fr); }
-      .event { grid-template-columns: 42px 1fr; }
-      .event .actor, .event .summary { grid-column: 2; }
-      .search { width: 100%; min-width: 0; margin-left: 0; }
-    }
+    html { scroll-behavior: smooth; }
+    body { margin:0; min-height:100vh; color:var(--text); background:radial-gradient(circle at 12% -10%,rgba(69,167,255,.16),transparent 34rem),radial-gradient(circle at 86% 0%,rgba(77,227,193,.11),transparent 30rem),linear-gradient(145deg,var(--bg),var(--bg-2)); }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.2; background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px); background-size:48px 48px; mask-image:linear-gradient(to bottom,black,transparent 72%); }
+    button,input,select { font:inherit; } button,label { -webkit-tap-highlight-color:transparent; } button { cursor:pointer; }
+    .hidden { display:none !important; }
+    .topbar { position:sticky; top:0; z-index:30; min-height:74px; padding:12px 24px; display:flex; align-items:center; justify-content:space-between; gap:18px; border-bottom:1px solid var(--line); backdrop-filter:blur(18px); background:color-mix(in srgb,var(--bg) 82%,transparent); }
+    .brand { display:flex; align-items:center; gap:13px; min-width:250px; }
+    .brand-mark { width:39px; height:39px; display:grid; place-items:center; border:1px solid rgba(77,227,193,.45); border-radius:12px; color:var(--accent); background:rgba(77,227,193,.09); box-shadow:inset 0 0 24px rgba(77,227,193,.08); }
+    .brand-mark svg { width:22px; height:22px; } .brand h1 { margin:0; font-size:16px; letter-spacing:.16em; } .brand p { margin:3px 0 0; color:var(--muted); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+    .top-actions { display:flex; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:7px; }
+    .button { min-height:36px; display:inline-flex; align-items:center; justify-content:center; gap:7px; border:1px solid var(--line); border-radius:10px; padding:8px 11px; color:var(--text); background:color-mix(in srgb,var(--panel-2) 84%,transparent); transition:.18s ease; }
+    .button:hover { transform:translateY(-1px); border-color:var(--line-strong); } .button.primary { background:linear-gradient(135deg,var(--accent),#78edd3); color:#052019; border:0; font-weight:750; }
+    .button.live.active { color:var(--accent); border-color:var(--accent); box-shadow:0 0 0 3px rgba(77,227,193,.1); } .button .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+    input[type="file"] { display:none; }
+    .shell { position:relative; z-index:1; max-width:1720px; margin:0 auto; padding:24px 26px 56px; }
+    .dropzone { min-height:calc(100vh - 130px); display:grid; place-items:center; padding:30px; border:1px dashed var(--line-strong); border-radius:26px; background:rgba(13,29,42,.42); transition:.2s ease; }
+    .dropzone.dragging { border-color:var(--accent); background:rgba(77,227,193,.06); transform:scale(.997); }
+    .welcome { width:min(900px,100%); text-align:center; } .eyebrow { color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    .welcome h2 { margin:12px 0; font-size:clamp(34px,5vw,68px); line-height:1; letter-spacing:-.045em; } .welcome>p { width:min(700px,100%); margin:0 auto 25px; color:var(--muted); font-size:16px; line-height:1.7; }
+    .welcome-actions { display:flex; justify-content:center; flex-wrap:wrap; gap:9px; }
+    .feature-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:34px; text-align:left; } .feature { padding:15px; border:1px solid var(--line); border-radius:14px; background:var(--panel); } .feature strong { display:block; margin-bottom:5px; font-size:13px; } .feature span { color:var(--muted); font-size:11px; line-height:1.5; }
+    .run-header { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; align-items:start; margin-bottom:14px; } .run-header h2 { margin:5px 0 6px; font-size:clamp(23px,3vw,38px); line-height:1.05; word-break:break-word; } .run-header p { margin:0; color:var(--muted); font-size:12px; }
+    .integrity { min-width:275px; max-width:420px; padding:13px 15px; border:1px solid rgba(92,227,154,.38); border-radius:14px; background:rgba(92,227,154,.07); color:var(--allow); font-size:12px; } .integrity.bad { color:var(--block); border-color:rgba(255,107,121,.4); background:rgba(255,107,121,.07); } .integrity strong { display:block; margin-bottom:4px; font-size:13px; }
+    .context-strip { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px; } .context-chip { padding:7px 10px; border:1px solid var(--line); border-radius:999px; background:var(--panel); color:var(--muted); font:11px ui-monospace,Consolas,monospace; } .context-chip b { color:var(--text); font-weight:650; }
+    .stats { display:grid; grid-template-columns:repeat(7,minmax(110px,1fr)); gap:8px; margin-bottom:14px; } .stat { min-height:88px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--panel); box-shadow:var(--shadow); } .stat strong { display:block; margin-bottom:6px; font-size:24px; letter-spacing:-.03em; } .stat span { color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+    .stat.allow strong { color:var(--allow); } .stat.block strong { color:var(--block); } .stat.rewrite strong { color:var(--rewrite); } .stat.escalate strong { color:var(--escalate); }
+    .playback { display:grid; grid-template-columns:auto auto minmax(180px,1fr) auto auto; align-items:center; gap:10px; padding:10px 12px; margin-bottom:10px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    .transport { display:flex; gap:5px; } .icon-button { width:36px; height:34px; padding:0; border:1px solid var(--line); border-radius:9px; color:var(--text); background:var(--panel-2); }
+    .play-progress { height:6px; overflow:hidden; border-radius:999px; background:var(--line); } .play-progress div { height:100%; width:0; background:linear-gradient(90deg,var(--accent-2),var(--accent)); transition:width .25s ease; }
+    .step-label { min-width:105px; color:var(--muted); font:11px ui-monospace,Consolas,monospace; } .speed { color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px; background:var(--panel-2); }
+    .caption { min-height:53px; margin-bottom:13px; padding:12px 16px; display:flex; align-items:center; gap:12px; border:1px solid rgba(69,167,255,.28); border-radius:14px; background:linear-gradient(90deg,rgba(69,167,255,.09),rgba(77,227,193,.05)); }
+    .caption span { color:var(--accent-2); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; } .caption strong { font-size:14px; font-weight:620; }
+    .tabs { display:flex; gap:4px; padding:4px; margin-bottom:12px; border:1px solid var(--line); border-radius:13px; background:var(--panel); width:fit-content; } .tab { padding:8px 13px; border:0; border-radius:9px; color:var(--muted); background:transparent; font-size:12px; } .tab.active { color:var(--text); background:var(--panel-2); box-shadow:inset 0 0 0 1px var(--line); }
+    .panel { display:none; } .panel.active { display:block; }
+    .story-layout { display:grid; grid-template-columns:minmax(300px,.72fr) minmax(0,1.5fr); gap:12px; }
+    .surface { border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); box-shadow:var(--shadow); overflow:hidden; } .surface-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--line); background:color-mix(in srgb,var(--panel-2) 78%,transparent); } .surface-head h3 { margin:0; font-size:12px; letter-spacing:.1em; text-transform:uppercase; } .surface-head span { color:var(--muted); font-size:10px; }
+    .decision-list { max-height:72vh; overflow:auto; padding:8px; } .decision-card { width:100%; display:grid; grid-template-columns:44px 1fr auto; gap:11px; align-items:center; margin-bottom:6px; padding:12px; text-align:left; color:var(--text); border:1px solid transparent; border-radius:12px; background:transparent; } .decision-card:hover,.decision-card.selected { border-color:var(--line); background:var(--panel-2); } .decision-card.selected { box-shadow:inset 3px 0 var(--accent); }
+    .step-orb { width:39px; height:39px; display:grid; place-items:center; border:1px solid var(--line); border-radius:12px; color:var(--muted); font:12px ui-monospace,Consolas,monospace; } .decision-card b { display:block; margin-bottom:4px; font-size:13px; } .decision-card small { display:block; max-width:250px; overflow:hidden; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; }
+    .pill { display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; border:1px solid currentColor; border-radius:999px; font-size:9px; font-weight:850; letter-spacing:.09em; text-transform:uppercase; } .allow { color:var(--allow); } .block { color:var(--block); } .escalate { color:var(--escalate); } .rewrite { color:var(--rewrite); }
+    .decision-detail { min-height:620px; padding:18px; } .decision-hero { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:14px; } .decision-hero h3 { margin:5px 0; font-size:25px; letter-spacing:-.025em; } .decision-hero p { margin:0; color:var(--muted); font-size:12px; }
+    .risk-ring { --risk:0; width:82px; height:82px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; background:conic-gradient(var(--block) calc(var(--risk)*1%),var(--line) 0); position:relative; } .risk-ring::after { content:""; position:absolute; inset:7px; border-radius:50%; background:var(--panel-solid); } .risk-ring div { position:relative; z-index:1; text-align:center; font-size:18px; font-weight:800; } .risk-ring span { display:block; color:var(--muted); font-size:8px; letter-spacing:.07em; text-transform:uppercase; }
+    .fact-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-bottom:14px; } .fact { padding:10px; border:1px solid var(--line); border-radius:11px; background:var(--panel-2); } .fact strong { display:block; font-size:13px; word-break:break-all; } .fact span { display:block; margin-top:4px; color:var(--muted); font-size:9px; letter-spacing:.07em; text-transform:uppercase; }
+    .narrative { margin-bottom:14px; padding:12px 14px; border-left:3px solid var(--accent); border-radius:0 10px 10px 0; background:rgba(77,227,193,.055); } .narrative strong { display:block; margin-bottom:4px; font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; } .narrative p { margin:0; font-size:13px; line-height:1.55; }
+    .reason-row { display:flex; flex-wrap:wrap; gap:5px; margin:0 0 14px; } .reason { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--panel-2); font-size:10px; } .reason b { display:block; margin-bottom:2px; color:var(--text); } .reason span { color:var(--muted); }
+    .gate-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:14px; } .gate-cell { min-width:0; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); overflow:hidden; } .gate-cell summary { list-style:none; cursor:pointer; padding:9px 7px; text-align:center; } .gate-cell summary::-webkit-details-marker { display:none; } .gate-cell b { display:block; font-size:12px; } .gate-cell span { color:var(--muted); font-size:8px; text-transform:uppercase; } .gate-cell.fail { border-color:rgba(255,107,121,.48); } .gate-cell.pass { border-color:rgba(92,227,154,.25); } .gate-notes { padding:8px; border-top:1px solid var(--line); color:var(--muted); font-size:9px; line-height:1.45; word-break:break-word; }
+    .section-title { margin:17px 0 8px; color:var(--muted); font-size:10px; letter-spacing:.1em; text-transform:uppercase; } .chain-flow { display:flex; align-items:stretch; gap:5px; overflow-x:auto; padding-bottom:4px; } .flow-node { min-width:125px; padding:9px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); } .flow-node b { display:block; font-size:10px; } .flow-node span { color:var(--muted); font-size:9px; } .flow-arrow { display:grid; place-items:center; color:var(--muted); }
+    .rewrite-diff { display:grid; grid-template-columns:1fr 34px 1fr; gap:8px; align-items:stretch; } .action-box { padding:12px; border:1px solid var(--line); border-radius:11px; background:var(--panel-2); min-width:0; } .action-box header { display:flex; justify-content:space-between; margin-bottom:8px; color:var(--muted); font-size:9px; text-transform:uppercase; } .action-box pre,.raw pre { margin:0; max-height:260px; overflow:auto; color:var(--text); font:10px/1.55 ui-monospace,Consolas,monospace; white-space:pre-wrap; word-break:break-word; } .diff-arrow { display:grid; place-items:center; color:var(--rewrite); font-size:22px; }
+    .approval-card { padding:13px; border:1px solid rgba(255,200,87,.35); border-radius:12px; background:rgba(255,200,87,.06); } .approval-card strong { color:var(--escalate); } .approval-card p { margin:5px 0 0; color:var(--muted); font-size:11px; line-height:1.5; }
+    .timeline-layout { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(350px,.65fr); gap:12px; } .toolbar { display:flex; flex-wrap:wrap; gap:5px; padding:9px; border-bottom:1px solid var(--line); } .filter { padding:6px 9px; border:1px solid transparent; border-radius:8px; color:var(--muted); background:transparent; font-size:10px; } .filter.active { color:var(--text); border-color:var(--line); background:var(--panel-2); } .search { margin-left:auto; min-width:220px; padding:7px 10px; color:var(--text); border:1px solid var(--line); border-radius:8px; background:var(--bg); outline:none; }
+    .timeline { max-height:70vh; overflow:auto; } .event { width:100%; display:grid; grid-template-columns:74px 88px 150px 1fr; gap:9px; align-items:center; padding:10px 13px; color:var(--text); text-align:left; border:0; border-bottom:1px solid var(--line); background:transparent; } .event:hover,.event.selected { background:var(--panel-2); } .seq { color:var(--accent); font:10px ui-monospace,Consolas,monospace; } .actor { color:var(--muted); font-size:10px; } .etype { font-size:11px; font-weight:700; } .summary { overflow:hidden; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+    .event-detail { padding:14px; max-height:70vh; overflow:auto; } .event-detail dl { display:grid; grid-template-columns:80px 1fr; gap:6px; font-size:11px; } .event-detail dt { color:var(--muted); } .event-detail dd { margin:0; word-break:break-all; } .raw { padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+    .comparison { display:grid; gap:8px; } .compare-head,.compare-row { display:grid; grid-template-columns:70px 1fr 52px 1fr; gap:10px; align-items:center; } .compare-head { padding:12px; color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; } .compare-row { padding:12px; border-top:1px solid var(--line); } .compare-step { color:var(--accent); font:11px ui-monospace,Consolas,monospace; } .compare-side { min-height:58px; padding:9px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); } .compare-side b { display:block; margin-bottom:4px; font-size:11px; } .compare-side span { color:var(--muted); font-size:10px; } .versus { color:var(--muted); text-align:center; font-size:10px; font-weight:800; }
+    .scorecards { display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:10px; } .scorecard { padding:15px; border:1px solid var(--line); border-radius:15px; background:var(--panel); box-shadow:var(--shadow); } .scorecard h3 { margin:0 0 4px; font-size:15px; } .scorecard .labels { color:var(--muted); font-size:10px; } .metric-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin:13px 0; } .metric { padding:8px; border-radius:9px; background:var(--panel-2); text-align:center; } .metric b { display:block; font-size:15px; } .metric span { color:var(--muted); font-size:8px; text-transform:uppercase; } table { width:100%; border-collapse:collapse; font-size:10px; } th,td { padding:7px; border-bottom:1px solid var(--line); text-align:left; } th { color:var(--muted); }
+    .empty { padding:38px 20px; color:var(--muted); text-align:center; } .error-list { margin:7px 0 0; padding-left:17px; }
+    body.presenter .top-actions label:not([for="captionInput"]),body.presenter #resetButton,body.presenter .tabs,body.presenter .context-strip { display:none; } body.presenter .shell { max-width:1500px; padding-top:18px; } body.presenter .decision-detail { min-height:calc(100vh - 330px); } body.presenter .decision-list { max-height:calc(100vh - 330px); }
+    @media(max-width:1120px){.stats{grid-template-columns:repeat(4,1fr)}.story-layout,.timeline-layout{grid-template-columns:1fr}.decision-list{max-height:360px}.gate-grid{grid-template-columns:repeat(4,1fr)}.feature-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:720px){.topbar{flex-direction:column;align-items:stretch}.run-header{grid-template-columns:1fr}.top-actions{justify-content:flex-start}.shell{padding:14px 10px 36px}.stats{grid-template-columns:repeat(2,1fr)}.fact-grid{grid-template-columns:repeat(2,1fr)}.gate-grid{grid-template-columns:repeat(2,1fr)}.rewrite-diff{grid-template-columns:1fr}.diff-arrow{transform:rotate(90deg)}.feature-grid{grid-template-columns:1fr}.playback{grid-template-columns:auto 1fr auto}.play-progress{grid-column:1/-1}.event{grid-template-columns:58px 1fr}.event .actor,.event .summary{grid-column:2}.compare-head,.compare-row{grid-template-columns:55px 1fr}.versus{display:none}}
   </style>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><h1>SENTINEL</h1><span>digest-linked trace viewer</span></div>
-    <div class="actions">
-      <button class="button" id="resetButton" type="button">Clear</button>
-      <label class="button primary" for="fileInput">Open JSONL</label>
-      <input id="fileInput" type="file" accept=".jsonl,.json,text/plain,application/json">
+    <div class="brand"><div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 5v6c0 5.2 3.4 9.2 8 11 4.6-1.8 8-5.8 8-11V5l-8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div><div><h1>SENTINEL</h1><p>Action firewall · mission control</p></div></div>
+    <div class="top-actions">
+      <button class="button live" id="followButton"><span class="dot"></span> Follow live</button>
+      <label class="button" for="compareInput">Compare run</label><input id="compareInput" type="file" accept=".jsonl,text/plain">
+      <label class="button" for="scoreInput">Scorecards</label><input id="scoreInput" type="file" accept=".json" multiple>
+      <label class="button" for="captionInput">Captions</label><input id="captionInput" type="file" accept=".json">
+      <button class="button" id="presenterButton">Presenter mode</button><button class="button" id="resetButton">Clear</button>
+      <label class="button primary" for="fileInput">Open trace</label><input id="fileInput" type="file" accept=".jsonl,text/plain">
     </div>
   </header>
-
   <main class="shell">
-    <section class="dropzone" id="dropzone">
-      <div>
-        <h2>Inspect a trusted run trace</h2>
-        <p>Drop an official SENTINEL <code>.jsonl</code> artifact here or open one from disk. Processing stays in this browser; the viewer makes no network requests.</p>
-        <label class="button primary" for="fileInput">Choose trace</label>
-      </div>
-    </section>
-
+    <section class="dropzone" id="dropzone"><div class="welcome"><div class="eyebrow">Offline · deterministic · evidence first</div><h2>Turn a security trace into a story.</h2><p>Open a SENTINEL JSONL artifact to inspect every decision, gate, rewrite, approval, execution receipt, and verified state transition. Files stay on this device.</p><div class="welcome-actions"><label class="button primary" for="fileInput">Choose primary trace</label><button class="button" id="welcomeLive">Follow a growing trace</button></div><div class="feature-grid"><div class="feature"><strong>Decision story</strong><span>One legible card per action with plain-language reasons.</span></div><div class="feature"><strong>Paired comparison</strong><span>Align allow_all and SENTINEL by step and executed tool.</span></div><div class="feature"><strong>Presenter playback</strong><span>Step, autoplay, speed, keyboard navigation, and captions.</span></div><div class="feature"><strong>Integrity aware</strong><span>Browser checks are visible; Python remains authoritative.</span></div></div></div></section>
     <div id="workspace" class="hidden">
-      <div class="runline">
-        <div><h2 id="runTitle"></h2><p id="runSubtitle"></p></div>
-        <div class="integrity" id="integrityBadge"></div>
-      </div>
-      <section class="stats" id="stats"></section>
-      <nav class="toolbar" aria-label="Event filters">
-        <button class="filter active" data-filter="all">All</button>
-        <button class="filter" data-filter="security">Security path</button>
-        <button class="filter" data-filter="decision">Decisions</button>
-        <button class="filter" data-filter="allow">Allow</button>
-        <button class="filter" data-filter="block">Block</button>
-        <button class="filter" data-filter="escalate">Escalate</button>
-        <button class="filter" data-filter="rewrite">Rewrite</button>
-        <button class="filter" data-filter="execution">Execution</button>
-        <button class="filter" data-filter="agent">Agent</button>
-        <button class="filter" data-filter="evaluator">Outcome</button>
-        <input class="search" id="search" type="search" placeholder="Search tool, reason code, destination, payload">
-      </nav>
-
-      <div class="layout">
-        <section class="section">
-          <div class="section-head"><h3>Event timeline</h3><span id="eventCount"></span></div>
-          <div class="timeline" id="timeline"></div>
-        </section>
-        <aside class="section">
-          <div class="section-head"><h3>Event inspection</h3><span>trusted JSONL payload</span></div>
-          <div class="detail" id="detail"></div>
-        </aside>
-      </div>
-
-      <section class="section chains">
-        <div class="section-head"><h3>Digest-linked action chains</h3><span id="chainCount"></span></div>
-        <div class="chain-list" id="chains"></div>
-      </section>
+      <section class="run-header"><div><div class="eyebrow" id="runMode">Recorded trace</div><h2 id="runTitle"></h2><p id="runSubtitle"></p></div><div class="integrity" id="integrityBadge"></div></section>
+      <div class="context-strip" id="contextStrip"></div><section class="stats" id="stats"></section>
+      <section class="playback"><div class="transport"><button class="icon-button" id="previousButton" title="Previous (←)">←</button><button class="icon-button" id="playButton" title="Play / pause (Space)">▶</button><button class="icon-button" id="nextButton" title="Next (→)">→</button></div><div class="step-label" id="stepLabel"></div><div class="play-progress"><div id="playProgress"></div></div><select class="speed" id="speedSelect"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select><span class="step-label">← → / Space</span></section>
+      <section class="caption"><span>Presenter note</span><strong id="captionText"></strong></section>
+      <nav class="tabs"><button class="tab active" data-tab="story">Decision story</button><button class="tab" data-tab="timeline">Full timeline</button><button class="tab" data-tab="comparison">Paired comparison</button><button class="tab" data-tab="scoreboard">Scoreboard</button></nav>
+      <section class="panel active" id="storyPanel"><div class="story-layout"><section class="surface"><div class="surface-head"><h3>Decisions</h3><span id="decisionCount"></span></div><div class="decision-list" id="decisionList"></div></section><section class="surface"><div class="surface-head"><h3>Policy evidence</h3><span>select a gate for its risk basis</span></div><div class="decision-detail" id="decisionDetail"></div></section></div></section>
+      <section class="panel" id="timelinePanel"><div class="timeline-layout"><section class="surface"><div class="toolbar"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="security">Security</button><button class="filter" data-filter="decision">Decisions</button><button class="filter" data-filter="allow">Allow</button><button class="filter" data-filter="block">Block</button><button class="filter" data-filter="escalate">Escalate</button><button class="filter" data-filter="rewrite">Rewrite</button><button class="filter" data-filter="execution">Execution</button><button class="filter" data-filter="evaluator">Outcome</button><input class="search" id="search" type="search" placeholder="Search payload, reason, destination"></div><div class="timeline" id="timeline"></div></section><aside class="surface"><div class="surface-head"><h3>Event payload</h3><span id="eventCount"></span></div><div class="event-detail" id="eventDetail"></div></aside></div></section>
+      <section class="panel" id="comparisonPanel"><div class="surface"><div class="surface-head"><h3>Executed-action comparison</h3><span id="compareLabel">Load a second JSONL trace</span></div><div class="comparison" id="comparison"></div></div></section>
+      <section class="panel" id="scoreboardPanel"><div class="scorecards" id="scorecards"><div class="surface empty">Load scorecard JSON files to compare defenses and ablations.</div></div></section>
     </div>
   </main>
-
   <script>
     "use strict";
-
-    const securityTypes = new Set([
-      "action_proposal", "firewall_decision", "action_rewrite", "approval_record",
-      "executor_receipt", "state_verified"
-    ]);
-    const decisionTypes = new Set(["firewall_decision", "defense_decision", "approval_record"]);
-    const executionTypes = new Set(["tool_request", "tool_result", "executor_receipt", "state_verified"]);
-    const emitterRules = {
-      action_proposal: ["decision_service", "defense"],
-      firewall_decision: ["decision_service", "defense"],
-      action_rewrite: ["decision_service", "defense"],
-      approval_record: ["decision_service", "defense"],
-      executor_receipt: ["guarded_executor", "tool_gateway"],
-      state_verified: ["guarded_executor", "tool_gateway"]
-    };
-    const linkFields = [
-      "action_digest", "policy_version", "policy_hash", "tool_spec_version",
-      "normalizer_version", "authorized_state_version", "task_id"
-    ];
-
-    const app = { events: [], filter: "all", query: "", selected: null, filename: "" };
-    const $ = (id) => document.getElementById(id);
-    const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-    })[char]);
-
-    function parseJsonl(text) {
-      const events = [];
-      text.split(/\r?\n/).forEach((line, index) => {
-        if (!line.trim()) return;
-        try {
-          const event = JSON.parse(line);
-          if (!event || typeof event !== "object" || typeof event.type !== "string") {
-            throw new Error("event object or type is missing");
-          }
-          events.push(event);
-        } catch (error) {
-          throw new Error(`Line ${index + 1}: ${error.message}`);
-        }
-      });
-      if (!events.length) throw new Error("The file contains no events.");
-      const runIds = new Set(events.map((event) => event.run_id));
-      if (runIds.size !== 1) throw new Error("A trace must contain exactly one run_id.");
-      return events.sort((a, b) => Number(a.seq) - Number(b.seq));
-    }
-
-    function linkKey(event) {
-      return linkFields.map((field) => JSON.stringify(event.payload?.[field])).join("|");
-    }
-
-    function inspectIntegrity(events) {
-      const errors = [];
-      const security = events.filter((event) => securityTypes.has(event.type));
-      const byLink = new Map();
-      for (const event of security) {
-        const rule = emitterRules[event.type];
-        if (!rule || event.payload?.emitter !== rule[0] || event.actor !== rule[1]) {
-          errors.push(`${event.event_id}: untrusted ${event.type} emitter`);
-        }
-        const missing = linkFields.filter((field) => !(field in (event.payload || {})));
-        if (missing.length) errors.push(`${event.event_id}: missing ${missing.join(", ")}`);
-        const digest = event.payload?.action_digest;
-        if (typeof digest !== "string" || digest.length !== 24) errors.push(`${event.event_id}: invalid action digest`);
-        const key = linkKey(event);
-        if (!byLink.has(key)) byLink.set(key, []);
-        byLink.get(key).push(event);
-      }
-      let executed = 0;
-      for (const chain of byLink.values()) {
-        const proposals = chain.filter((event) => event.type === "action_proposal");
-        const decisions = chain.filter((event) => event.type === "firewall_decision");
-        const receipts = chain.filter((event) => event.type === "executor_receipt");
-        const states = chain.filter((event) => event.type === "state_verified");
-        const digest = chain[0]?.payload?.action_digest || "unknown";
-        if (chain.some((event) => event.type !== "action_proposal") && !proposals.length) {
-          errors.push(`${digest}: linked security events have no proposal`);
-        }
-        for (const decision of decisions) {
-          if (!proposals.some((proposal) => proposal.seq < decision.seq)) errors.push(`${digest}: decision precedes proposal`);
-        }
-        if (receipts.length !== states.length) errors.push(`${digest}: receipt/state count mismatch`);
-        receipts.forEach((receipt, index) => {
-          executed += 1;
-          if (!decisions.some((decision) => decision.seq < receipt.seq)) errors.push(`${digest}: receipt has no prior decision`);
-          if (!states[index] || receipt.seq >= states[index].seq) errors.push(`${digest}: state result does not follow receipt`);
-        });
-      }
-      return { errors, securityEvents: security.length, chains: byLink.size, executed };
-    }
-
-    function outcomeLabel(events) {
-      const outcome = [...events].reverse().find((event) => event.type === "task_success" || event.type === "task_failure");
-      if (!outcome) return { value: "Unrecorded", className: "escalate" };
-      return outcome.type === "task_success"
-        ? { value: "Task success", className: "allow" }
-        : { value: "Task failure", className: "block" };
-    }
-
-    function decisionValue(event) {
-      return String(event.payload?.outcome || event.payload?.decision || "").toLowerCase();
-    }
-
-    function summarize(event) {
-      const payload = event.payload || {};
-      const decision = decisionValue(event);
-      if (event.type === "firewall_decision") return `${decision.toUpperCase()} · risk ${payload.risk_score ?? "?"} · confidence ${payload.confidence ?? "?"} · ${(payload.reason_codes || []).join(", ")}`;
-      if (event.type === "action_proposal") return payload.original_proposal?.tool || payload.original_proposal?.type || "candidate action";
-      if (event.type === "action_rewrite") return `replacement: ${payload.replacement?.tool || payload.replacement?.type}`;
-      if (event.type === "executor_receipt") return `${payload.tool || payload.executed_action?.tool || "action"} · ${payload.succeeded ? "succeeded" : "failed"}`;
-      if (event.type === "state_verified") return `state v${payload.new_state_version ?? payload.authorized_state_version}`;
-      if (event.type === "tool_request") return payload.tool || "tool request";
-      if (event.type === "tool_result") return `${payload.tool || "tool"} · ${payload.succeeded === false ? "failed" : "ok"}`;
-      if (event.type === "model_output") return payload.content || "model output";
-      if (event.type === "user_message") return payload.text || "user message";
-      if (event.type === "task_success" || event.type === "task_failure") return payload.summary || event.type;
-      return JSON.stringify(payload).slice(0, 180);
-    }
-
-    function renderStats(integrity) {
-      const decisions = app.events.filter((event) => event.type === "firewall_decision");
-      const blocks = decisions.filter((event) => decisionValue(event) === "block").length;
-      const rewrites = decisions.filter((event) => decisionValue(event) === "rewrite").length;
-      const approvals = app.events.filter((event) => event.type === "approval_record").length;
-      const outcome = outcomeLabel(app.events);
-      const rows = [
-        [outcome.value, "Run outcome", `emphasis ${outcome.className}`],
-        [app.events.length, "Events", ""],
-        [decisions.length, "Firewall decisions", ""],
-        [blocks, "Blocked actions", blocks ? "block" : ""],
-        [rewrites, "Safe rewrites", rewrites ? "rewrite" : ""],
-        [`${integrity.executed} / ${approvals}`, "Executions / approvals", ""]
-      ];
-      $("stats").innerHTML = rows.map(([value, label, cls]) =>
-        `<div class="stat ${cls}"><strong>${safe(value)}</strong><span>${safe(label)}</span></div>`
-      ).join("");
-    }
-
-    function eventMatches(event) {
-      const category = app.filter;
-      const categoryMatch = category === "all"
-        || (category === "security" && securityTypes.has(event.type))
-        || (category === "decision" && decisionTypes.has(event.type))
-        || (["allow", "block", "escalate", "rewrite"].includes(category) && decisionValue(event) === category)
-        || (category === "execution" && executionTypes.has(event.type))
-        || (category === "agent" && (event.actor === "agent" || event.actor === "user"))
-        || (category === "evaluator" && event.actor === "evaluator");
-      if (!categoryMatch) return false;
-      return !app.query || JSON.stringify(event).toLowerCase().includes(app.query);
-    }
-
-    function renderTimeline() {
-      const visible = app.events.filter(eventMatches);
-      $("eventCount").textContent = `${visible.length} of ${app.events.length}`;
-      if (!visible.length) {
-        $("timeline").innerHTML = '<div class="empty">No events match this filter.</div>';
-        return;
-      }
-      $("timeline").innerHTML = visible.map((event) => `
-        <button class="event ${app.selected?.event_id === event.event_id ? "selected" : ""}" data-event-id="${safe(event.event_id)}">
-          <span class="seq">#${String(event.seq).padStart(4, "0")}</span>
-          <span class="actor">${safe(event.actor)}</span>
-          <span class="etype">${safe(event.type)}</span>
-          <span class="summary">${safe(summarize(event))}</span>
-        </button>`).join("");
-      document.querySelectorAll(".event").forEach((button) => button.addEventListener("click", () => {
-        app.selected = app.events.find((event) => event.event_id === button.dataset.eventId);
-        renderTimeline(); renderDetail();
-      }));
-    }
-
-    function renderDetail() {
-      const event = app.selected || app.events[0];
-      if (!event) return;
-      const decision = decisionValue(event);
-      const badge = decision ? `<span class="pill ${safe(decision)}">${safe(decision)}</span>` : "";
-      const payload = event.payload || {};
-      const gates = payload.gates || [];
-      const decisionPanel = event.type === "firewall_decision" ? `
-        <div class="decision-grid">
-          <div class="decision-fact"><strong>${safe(payload.risk_score ?? "—")}</strong><span>Risk severity</span></div>
-          <div class="decision-fact"><strong>${safe(payload.confidence ?? "—")}</strong><span>Fact confidence</span></div>
-          <div class="decision-fact"><strong>${safe(payload.provenance?.dependency_count ?? 0)} / ${safe(payload.provenance?.node_count ?? 0)}</strong><span>Dependencies / nodes</span></div>
-        </div>
-        ${payload.replacement ? `<div class="rewrite-box"><strong>Validated replacement</strong><pre>${safe(JSON.stringify(payload.replacement, null, 2))}</pre></div>` : ""}
-        <table class="gate-table"><thead><tr><th>Gate</th><th>Result</th><th>Risk basis / reasons</th></tr></thead><tbody>
-          ${gates.map((gate) => `<tr><td>${safe(gate.gate)}</td><td class="${gate.applicable && !gate.passed ? "block" : "allow"}">${safe(gate.applicable ? (gate.passed ? "pass" : "fail") : "n/a")}</td><td>${safe([...(gate.risk_basis || []), ...(gate.reason_codes || [])].join(" · ") || "—")}</td></tr>`).join("")}
-        </tbody></table>` : "";
-      $("detail").innerHTML = `
-        <h4>${safe(event.type)} ${badge}</h4>
-        <dl class="detail-meta">
-          <dt>Sequence</dt><dd>${safe(event.seq)}</dd>
-          <dt>Step</dt><dd>${safe(event.step_id)}</dd>
-          <dt>Actor</dt><dd>${safe(event.actor)}</dd>
-          <dt>Timestamp</dt><dd>${safe(event.timestamp)}</dd>
-          <dt>Event ID</dt><dd>${safe(event.event_id)}</dd>
-          <dt>Digest</dt><dd>${safe(event.payload?.action_digest || "—")}</dd>
-        </dl>
-        ${decisionPanel}
-        <pre>${safe(JSON.stringify(event.payload || {}, null, 2))}</pre>`;
-    }
-
-    function renderChains() {
-      const grouped = new Map();
-      app.events.filter((event) => securityTypes.has(event.type)).forEach((event) => {
-        const key = linkKey(event);
-        if (!grouped.has(key)) grouped.set(key, []);
-        grouped.get(key).push(event);
-      });
-      const chains = [...grouped.values()].sort((a, b) => a[0].seq - b[0].seq);
-      $("chainCount").textContent = `${chains.length} linked chains`;
-      if (!chains.length) {
-        $("chains").innerHTML = '<div class="empty">This trace has no SENTINEL security events.</div>';
-        return;
-      }
-      $("chains").innerHTML = chains.map((chain) => {
-        const decision = chain.find((event) => event.type === "firewall_decision");
-        const outcome = decisionValue(decision || {});
-        const codes = decision?.payload?.reason_codes || [];
-        const gates = decision?.payload?.gates || [];
-        const receipts = chain.filter((event) => event.type === "executor_receipt").length;
-        const digest = chain[0].payload.action_digest;
-        const risk = decision?.payload?.risk_score;
-        const confidence = decision?.payload?.confidence;
-        const provenance = decision?.payload?.provenance;
-        return `<article class="chain">
-          <div><div class="digest">${safe(digest)}</div><div class="gates">${gates.map((gate) =>
-            `<span class="gate ${gate.applicable && !gate.passed ? "fail" : ""}">${safe(gate.gate)} ${gate.applicable ? (gate.passed ? "pass" : "fail") : "n/a"}</span>`
-          ).join("")}</div></div>
-          <div>${outcome ? `<span class="pill ${safe(outcome)}">${safe(outcome)}</span>` : '<span class="pill">pending</span>'}</div>
-          <div class="codes">${safe(codes.join(" · ") || "No failure reason codes")}<br>
-            risk ${safe(risk ?? "—")} · confidence ${safe(confidence ?? "—")} · provenance ${safe(provenance?.dependency_count ?? 0)}/${safe(provenance?.node_count ?? 0)}
-          </div>
-          <div class="count">${chain.length} events<br>${receipts} receipt${receipts === 1 ? "" : "s"}</div>
-        </article>`;
-      }).join("");
-    }
-
-    function render() {
-      const integrity = inspectIntegrity(app.events);
-      const runId = app.events[0]?.run_id || "unknown run";
-      $("dropzone").classList.add("hidden");
-      $("workspace").classList.remove("hidden");
-      $("runTitle").textContent = runId;
-      $("runSubtitle").textContent = `${app.filename} · ${app.events[0]?.timestamp || "timestamp unavailable"}`;
-      const badge = $("integrityBadge");
-      badge.classList.toggle("bad", integrity.errors.length > 0);
-      badge.innerHTML = integrity.errors.length
-        ? `<strong>${integrity.errors.length} continuity warning${integrity.errors.length === 1 ? "" : "s"}</strong><ul class="error-list">${integrity.errors.slice(0, 4).map((error) => `<li>${safe(error)}</li>`).join("")}</ul>`
-        : `<strong>Trace continuity checks pass</strong><br>${integrity.securityEvents} security events · ${integrity.chains} chains`;
-      renderStats(integrity); renderTimeline(); renderDetail(); renderChains();
-    }
-
-    async function loadFile(file) {
-      try {
-        app.events = parseJsonl(await file.text());
-        app.filename = file.name;
-        app.selected = app.events[0];
-        app.filter = "all"; app.query = "";
-        $("search").value = "";
-        document.querySelectorAll(".filter").forEach((button) => button.classList.toggle("active", button.dataset.filter === "all"));
-        render();
-      } catch (error) {
-        window.alert(`Unable to open trace: ${error.message}`);
-      }
-    }
-
-    $("fileInput").addEventListener("change", (event) => {
-      if (event.target.files?.[0]) loadFile(event.target.files[0]);
-      event.target.value = "";
-    });
-    $("resetButton").addEventListener("click", () => {
-      app.events = []; app.selected = null; app.filename = "";
-      $("workspace").classList.add("hidden"); $("dropzone").classList.remove("hidden");
-    });
-    document.querySelectorAll(".filter").forEach((button) => button.addEventListener("click", () => {
-      app.filter = button.dataset.filter;
-      document.querySelectorAll(".filter").forEach((item) => item.classList.toggle("active", item === button));
-      renderTimeline();
-    }));
-    $("search").addEventListener("input", (event) => { app.query = event.target.value.trim().toLowerCase(); renderTimeline(); });
-    ["dragenter", "dragover"].forEach((name) => $("dropzone").addEventListener(name, (event) => {
-      event.preventDefault(); $("dropzone").classList.add("dragging");
-    }));
-    ["dragleave", "drop"].forEach((name) => $("dropzone").addEventListener(name, (event) => {
-      event.preventDefault(); $("dropzone").classList.remove("dragging");
-    }));
-    $("dropzone").addEventListener("drop", (event) => { if (event.dataTransfer.files?.[0]) loadFile(event.dataTransfer.files[0]); });
+    const securityTypes=new Set(["action_proposal","firewall_decision","action_rewrite","approval_record","executor_receipt","state_verified"]),decisionTypes=new Set(["firewall_decision","defense_decision","approval_record"]),executionTypes=new Set(["tool_request","tool_result","executor_receipt","state_verified"]);
+    const emitterRules={action_proposal:["decision_service","defense"],firewall_decision:["decision_service","defense"],action_rewrite:["decision_service","defense"],approval_record:["decision_service","defense"],executor_receipt:["guarded_executor","tool_gateway"],state_verified:["guarded_executor","tool_gateway"]};
+    const linkFields=["action_digest","policy_version","policy_hash","tool_spec_version","normalizer_version","authorized_state_version","task_id"];
+    const gateNames={G1:"Effect authority",G2:"Task scope",G3:"Lifecycle integrity",G4:"Approval binding",G5:"Authority-source check",G6:"Confidentiality & egress",G7:"Destination integrity"};
+    const reasonMeanings={POLICY_CHECKS_PASSED:"All applicable deterministic checks passed.",POLICY_TOOL_DENIED:"The active system policy does not permit this tool.",TASK_CAPABILITY_DENIED:"Authenticated task scope does not grant this capability.",TASK_AUTH_MISSING:"Authenticated task authority is missing; tool effects fail closed.",APPROVAL_REQUIRED:"A protected exact-action approval is required.",SENSITIVE_EGRESS:"Restricted content would cross an unauthorized trust boundary.",DESTINATION_SENSITIVITY_DENIED:"Payload sensitivity is incompatible with this destination.",POLICY_SAFE_REWRITE:"A policy-owned safe action replaced the original.",TASK_DESTINATION_DENIED:"The task does not authorize this destination.",DESTINATION_POLICY_DENIED:"System policy does not authorize this destination.",LIFECYCLE_ORDER_INVALID:"Workflow state does not permit this transition.",UNPROTECTED_AUTHORITY_SOURCE:"Authority came from an unprotected source.",UNKNOWN_TOOL:"No trusted ToolSpec exists for this tool.",MALFORMED_ACTION:"Strict schema normalization failed."};
+    const app={events:[],compareEvents:[],scorecards:[],captions:[],filter:"all",query:"",selectedEvent:null,selectedDecision:0,filename:"",compareFilename:"",liveHandle:null,liveTimer:null,liveSize:-1,playing:false,playTimer:null,tab:"story"};
+    const $=(id)=>document.getElementById(id),safe=(value)=>String(value??"").replace(/[&<>"']/g,(char)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"})[char]),compact=(value,max=32)=>{const text=String(value??"—");return text.length>max?`${text.slice(0,max)}…`:text;},pretty=(value)=>JSON.stringify(value??{},null,2);
+    function parseJsonl(text,allowPartial=false){const lines=text.split(/\r?\n/),events=[];lines.forEach((line,index)=>{if(!line.trim())return;try{const event=JSON.parse(line);if(!event||typeof event.type!=="string")throw new Error("event type is missing");events.push(event);}catch(error){if(allowPartial&&index===lines.length-1)return;throw new Error(`Line ${index+1}: ${error.message}`);}});if(!events.length)throw new Error("The file contains no complete events.");if(new Set(events.map((event)=>event.run_id)).size!==1)throw new Error("A trace must contain exactly one run_id.");return events.sort((a,b)=>Number(a.seq)-Number(b.seq));}
+    function linkKey(event){return linkFields.map((field)=>JSON.stringify(event.payload?.[field])).join("|");} function decisionValue(event){return String(event?.payload?.outcome||event?.payload?.decision||"").toLowerCase();}
+    function inspectIntegrity(events){const errors=[],security=events.filter((event)=>securityTypes.has(event.type)),byLink=new Map();for(const event of security){const rule=emitterRules[event.type];if(!rule||event.payload?.emitter!==rule[0]||event.actor!==rule[1])errors.push(`${event.event_id}: untrusted ${event.type} emitter`);const missing=linkFields.filter((field)=>!(field in(event.payload||{})));if(missing.length)errors.push(`${event.event_id}: missing ${missing.join(", ")}`);const digest=event.payload?.action_digest;if(typeof digest!=="string"||digest.length!==24)errors.push(`${event.event_id}: invalid action digest`);const key=linkKey(event);if(!byLink.has(key))byLink.set(key,[]);byLink.get(key).push(event);}let executed=0;for(const chain of byLink.values()){const proposals=chain.filter((e)=>e.type==="action_proposal"),decisions=chain.filter((e)=>e.type==="firewall_decision"),receipts=chain.filter((e)=>e.type==="executor_receipt"),states=chain.filter((e)=>e.type==="state_verified"),digest=chain[0]?.payload?.action_digest||"unknown";if(chain.some((e)=>e.type!=="action_proposal")&&!proposals.length)errors.push(`${digest}: linked events have no proposal`);for(const decision of decisions)if(!proposals.some((proposal)=>proposal.seq<decision.seq))errors.push(`${digest}: decision precedes proposal`);if(receipts.length!==states.length)errors.push(`${digest}: receipt/state mismatch`);receipts.forEach((receipt,index)=>{executed++;if(!decisions.some((decision)=>decision.seq<receipt.seq))errors.push(`${digest}: receipt has no prior decision`);if(!states[index]||receipt.seq>=states[index].seq)errors.push(`${digest}: state does not follow receipt`);});}return{errors,securityEvents:security.length,chains:byLink.size,executed};}
+    function buildChains(events){const grouped=new Map();events.filter((event)=>securityTypes.has(event.type)).forEach((event)=>{const key=linkKey(event);if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(event);});return[...grouped.values()].sort((a,b)=>a[0].seq-b[0].seq).map((events)=>({events,proposal:events.find((e)=>e.type==="action_proposal"),decision:events.find((e)=>e.type==="firewall_decision"),rewrite:events.find((e)=>e.type==="action_rewrite"),approval:events.find((e)=>e.type==="approval_record"),receipt:events.find((e)=>e.type==="executor_receipt"),state:events.find((e)=>e.type==="state_verified")})).filter((chain)=>chain.decision);}
+    function actionName(chain){const action=chain.proposal?.payload?.original_proposal;return action?.tool||action?.type||"action";} function nextNarrative(chain){const outcome=decisionValue(chain.decision),replacement=chain.rewrite?.payload?.replacement;if(outcome==="block"&&!chain.receipt)return"Stopped at the firewall. No guarded executor receipt or verified state change exists for this action.";if(outcome==="rewrite")return`The original ${actionName(chain)} was replaced with ${replacement?.tool||replacement?.type||"a safe action"}. ${chain.receipt?"Only the replacement executed and its resulting state was verified.":"The replacement did not execute."}`;if(outcome==="escalate")return chain.approval?`Execution paused for a simulated ${chain.approval.payload?.issuer_role||"human"} approval, then resumed only after full revalidation.`:"Execution is paused pending protected human approval.";return chain.receipt?`${chain.receipt.payload?.tool||actionName(chain)} executed through the guarded gateway; state ${chain.state?.payload?.new_state_version??"was verified"}.`:"The action produced no tool execution receipt.";}
+    function summarize(event){const p=event.payload||{},d=decisionValue(event);if(event.type==="firewall_decision")return`${d.toUpperCase()} · risk ${p.risk_score??"?"} · ${(p.reason_codes||[]).join(", ")}`;if(event.type==="action_proposal")return p.original_proposal?.tool||p.original_proposal?.type||"candidate";if(event.type==="action_rewrite")return`replacement: ${p.replacement?.tool||p.replacement?.type}`;if(event.type==="executor_receipt")return`${p.tool||p.executed_action?.tool||"action"} · ${p.succeeded?"succeeded":"failed"}`;if(event.type==="state_verified")return`state v${p.new_state_version??p.authorized_state_version}`;if(event.type==="tool_request"||event.type==="tool_result")return p.tool||event.type;if(event.type==="model_output")return p.content||"model output";if(event.type==="user_message")return p.text||"user message";if(event.type.startsWith("task_"))return p.summary||event.type;return pretty(p).slice(0,150);}
+    function outcomeLabel(events){const event=[...events].reverse().find((e)=>e.type==="task_success"||e.type==="task_failure");return!event?{value:"In progress",cls:"escalate"}:event.type==="task_success"?{value:"Task success",cls:"allow"}:{value:"Task failure",cls:"block"};} function currentChains(){return buildChains(app.events);} function selectedChain(){const chains=currentChains();return chains[Math.min(app.selectedDecision,Math.max(0,chains.length-1))];}
+    function renderHeader(integrity){const first=app.events.find((e)=>e.type==="firewall_decision"),latest=[...app.events].reverse().find((e)=>e.type==="state_verified");$("runTitle").textContent=app.events[0]?.run_id||"unknown run";$("runSubtitle").textContent=`${app.filename} · logical sequence #0–#${app.events.at(-1)?.seq??0} · timestamps are deterministic logical time`;$("runMode").textContent=app.liveHandle?"Live incremental trace":"Recorded trace";const badge=$("integrityBadge");badge.classList.toggle("bad",integrity.errors.length>0);badge.innerHTML=integrity.errors.length?`<strong>${integrity.errors.length} browser continuity warning${integrity.errors.length===1?"":"s"}</strong><ul class="error-list">${integrity.errors.slice(0,3).map((e)=>`<li>${safe(e)}</li>`).join("")}</ul>`:`<strong>✓ Browser continuity checks pass</strong>${integrity.securityEvents} security events · ${integrity.chains} linked chains<br><span>Python verifier remains authoritative</span>`;$("contextStrip").innerHTML=[["Policy",compact(first?.payload?.policy_hash,18)],["Policy version",first?.payload?.policy_version??"—"],["ToolSpec",first?.payload?.tool_spec_version??"—"],["Normalizer",first?.payload?.normalizer_version??"—"],["State",`v${latest?.payload?.new_state_version??0}`],["Task",compact(first?.payload?.task_id,18)]].map(([k,v])=>`<span class="context-chip">${safe(k)} <b>${safe(v)}</b></span>`).join("");}
+    function renderStats(integrity){const decisions=currentChains().map((c)=>c.decision),counts=(name)=>decisions.filter((e)=>decisionValue(e)===name).length,outcome=outcomeLabel(app.events),rows=[[outcome.value,"Run outcome",outcome.cls],[decisions.length,"Decisions",""],[counts("allow"),"Allowed","allow"],[counts("block"),"Blocked","block"],[counts("escalate"),"Escalated","escalate"],[counts("rewrite"),"Rewritten","rewrite"],[integrity.executed,"Executed",""]];$("stats").innerHTML=rows.map(([v,l,c])=>`<div class="stat ${c}"><strong>${safe(v)}</strong><span>${safe(l)}</span></div>`).join("");}
+    function renderDecisionList(){const chains=currentChains();$("decisionCount").textContent=`${chains.length} action${chains.length===1?"":"s"}`;if(!chains.length){$("decisionList").innerHTML='<div class="empty">No firewall decisions yet.</div>';return;}$("decisionList").innerHTML=chains.map((chain,index)=>{const outcome=decisionValue(chain.decision),action=chain.proposal?.payload?.original_proposal||{},codes=chain.decision.payload?.reason_codes||[];return`<button class="decision-card ${index===app.selectedDecision?"selected":""}" data-decision="${index}"><span class="step-orb">${safe(chain.decision.step_id)}</span><span><b>${safe(action.tool||action.type||"action")}</b><small>${safe(codes.join(" · ")||"No reason codes")}</small></span><span class="pill ${safe(outcome)}">${safe(outcome)}</span></button>`;}).join("");document.querySelectorAll("[data-decision]").forEach((button)=>button.addEventListener("click",()=>selectDecision(Number(button.dataset.decision))));}
+    function renderGates(gates){return`<div class="gate-grid">${gates.map((gate)=>{const state=!gate.applicable?"n/a":gate.passed?"pass":"fail",notes=[...(gate.risk_basis||[]),...(gate.reason_codes||[])];return`<details class="gate-cell ${state}"><summary><b>${safe(gate.gate)}</b><span>${safe(gateNames[gate.gate]||"gate")} · ${state}</span></summary><div class="gate-notes">${safe(notes.join(" · ")||"No additional risk basis.")}</div></details>`;}).join("")}</div>`;}
+    function renderRewrite(chain){const original=chain.proposal?.payload?.original_proposal,replacement=chain.rewrite?.payload?.replacement||chain.decision?.payload?.replacement;if(!replacement)return"";const revalidation=chain.decision.payload?.rewrite_revalidation_gates||[];return`<div class="section-title">Policy-owned rewrite · recipient is preserved, content/effect is constrained</div><div class="rewrite-diff"><div class="action-box"><header><span>Original proposal</span><span>${safe(chain.decision.payload?.original_action_digest)}</span></header><pre>${safe(pretty(original))}</pre></div><div class="diff-arrow">→</div><div class="action-box"><header><span>Validated replacement</span><span>${safe(chain.decision.payload?.action_digest)}</span></header><pre>${safe(pretty(replacement))}</pre></div></div>${revalidation.length?`<div class="section-title">Replacement revalidation</div>${renderGates(revalidation)}`:""}`;}
+    function renderApproval(chain){if(!chain.approval)return"";const p=chain.approval.payload||{},view=p.approval_view||{};return`<div class="section-title">Protected approval</div><div class="approval-card"><strong>${safe(String(p.decision||"recorded").toUpperCase())} · simulated approver (${safe(p.issuer_role||"unknown role")})</strong><p>Effect: ${safe(view.effect||p.tool||"—")} · destination: ${safe((view.destinations||[]).join(", ")||"—")} · policy condition: ${safe(view.policy_condition||"—")} · exact action digest: ${safe(p.action_digest||"—")}. This is a simulator approval, not a real person.</p></div>`;}
+    function renderDecisionDetail(){const chain=selectedChain();if(!chain){$("decisionDetail").innerHTML='<div class="empty">Load a SENTINEL trace to inspect decisions.</div>';return;}const p=chain.decision.payload||{},outcome=decisionValue(chain.decision),action=chain.proposal?.payload?.original_proposal||{},risk=Number(p.risk_score||0),codes=p.reason_codes||[],prov=p.provenance||{},flow=[chain.proposal,[chain.rewrite,chain.approval].filter(Boolean),chain.decision,chain.receipt,chain.state].flat().filter(Boolean);$("decisionDetail").innerHTML=`<div class="decision-hero"><div><span class="pill ${safe(outcome)}">${safe(outcome)}</span><h3>${safe(action.tool||action.type||"action")}</h3><p>Step ${safe(chain.decision.step_id)} · seq ${safe(chain.proposal?.seq)}–${safe(chain.events.at(-1)?.seq)} · digest ${safe(p.action_digest)}</p></div><div class="risk-ring" style="--risk:${Math.round(risk*100)}"><div>${safe(risk.toFixed(2))}<span>Risk severity<br>not probability</span></div></div></div><div class="fact-grid"><div class="fact"><strong>${safe(p.confidence??"—")}</strong><span>Runtime-fact confidence</span></div><div class="fact"><strong>${safe(prov.dependency_count??0)}</strong><span>Dependencies</span></div><div class="fact"><strong>${safe(prov.node_count??0)}</strong><span>Provenance nodes</span></div><div class="fact"><strong>v${safe(chain.state?.payload?.new_state_version??p.authorized_state_version??0)}</strong><span>Authoritative state</span></div></div><div class="narrative"><strong>What happened next</strong><p>${safe(nextNarrative(chain))}</p></div><div class="reason-row">${codes.map((code)=>`<div class="reason"><b>${safe(code)}</b><span>${safe(reasonMeanings[code]||"Deterministic policy signal.")}</span></div>`).join("")||'<div class="reason"><b>No failure codes</b><span>Applicable checks passed.</span></div>'}</div><div class="section-title">G1–G7 deterministic gate matrix</div>${renderGates(p.gates||[])}<div class="section-title">Observed action chain · no un-emitted permit stage is shown</div><div class="chain-flow">${flow.map((event,index)=>`${index?'<div class="flow-arrow">›</div>':""}<div class="flow-node"><b>${safe(event.type)}</b><span>seq ${safe(event.seq)} · ${safe(event.actor)}</span></div>`).join("")}</div>${renderApproval(chain)}${renderRewrite(chain)}<div class="section-title">Original proposal payload</div><div class="raw"><pre>${safe(pretty(action))}</pre></div>`;}
+    function renderPlayback(){const chains=currentChains(),total=chains.length,current=total?Math.min(app.selectedDecision,total-1)+1:0;$("stepLabel").textContent=`decision ${current} / ${total}`;$("playProgress").style.width=total?`${current/total*100}%`:"0%";$("playButton").textContent=app.playing?"❚❚":"▶";const chain=selectedChain(),seq=chain?.decision?.seq??0,sidecar=[...app.captions].filter((c)=>Number(c.seq)<=seq).at(-1);$("captionText").textContent=sidecar?.text||(chain?nextNarrative(chain):"Load a trace to begin the presentation.");}
+    function selectDecision(index){const chains=currentChains();app.selectedDecision=Math.max(0,Math.min(index,chains.length-1));const chain=selectedChain();if(chain)app.selectedEvent=chain.decision;renderDecisionList();renderDecisionDetail();renderPlayback();renderTimeline();renderEventDetail();} function stepDecision(delta){const before=app.selectedDecision;selectDecision(before+delta);if(delta>0&&app.selectedDecision===currentChains().length-1)stopPlayback();}
+    function startPlayback(){if(app.playing||!currentChains().length)return;app.playing=true;renderPlayback();const tick=()=>{if(!app.playing)return;if(app.selectedDecision>=currentChains().length-1){stopPlayback();return;}selectDecision(app.selectedDecision+1);app.playTimer=setTimeout(tick,1800/(Number($("speedSelect").value)||1));};app.playTimer=setTimeout(tick,700);} function stopPlayback(){app.playing=false;if(app.playTimer)clearTimeout(app.playTimer);app.playTimer=null;renderPlayback();}
+    function eventMatches(event){const cat=app.filter,match=cat==="all"||(cat==="security"&&securityTypes.has(event.type))||(cat==="decision"&&decisionTypes.has(event.type))||(["allow","block","escalate","rewrite"].includes(cat)&&decisionValue(event)===cat)||(cat==="execution"&&executionTypes.has(event.type))||(cat==="evaluator"&&event.actor==="evaluator");return match&&(!app.query||pretty(event).toLowerCase().includes(app.query));}
+    function renderTimeline(){const visible=app.events.filter(eventMatches);$("eventCount").textContent=`${visible.length} / ${app.events.length}`;$("timeline").innerHTML=visible.length?visible.map((event)=>`<button class="event ${app.selectedEvent?.event_id===event.event_id?"selected":""}" data-event="${safe(event.event_id)}"><span class="seq">#${String(event.seq).padStart(4,"0")} / s${safe(event.step_id)}</span><span class="actor">${safe(event.actor)}</span><span class="etype">${safe(event.type)}</span><span class="summary">${safe(summarize(event))}</span></button>`).join(""):'<div class="empty">No matching events.</div>';document.querySelectorAll("[data-event]").forEach((button)=>button.addEventListener("click",()=>{app.selectedEvent=app.events.find((e)=>e.event_id===button.dataset.event);renderTimeline();renderEventDetail();}));}
+    function renderEventDetail(){const event=app.selectedEvent||app.events[0];if(!event)return;$("eventDetail").innerHTML=`<span class="pill ${safe(decisionValue(event))}">${safe(event.type)}</span><dl><dt>Sequence</dt><dd>${safe(event.seq)}</dd><dt>Step</dt><dd>${safe(event.step_id)}</dd><dt>Actor</dt><dd>${safe(event.actor)}</dd><dt>Event ID</dt><dd>${safe(event.event_id)}</dd><dt>Digest</dt><dd>${safe(event.payload?.action_digest||"—")}</dd><dt>Provenance refs</dt><dd>${safe((event.provenance_refs||[]).join(", ")||"—")}</dd></dl><div class="raw"><pre>${safe(pretty(event.payload||{}))}</pre></div>`;}
+    function stepEvidence(events){const map=new Map();events.forEach((event)=>{if(!map.has(event.step_id))map.set(event.step_id,{step:event.step_id,events:[]});map.get(event.step_id).events.push(event);});return map;} function sideSummary(bundle){if(!bundle)return{title:"No event",detail:"—",cls:""};const request=bundle.events.find((e)=>e.type==="tool_request"),receipt=bundle.events.find((e)=>e.type==="executor_receipt"),fw=bundle.events.find((e)=>e.type==="firewall_decision"),def=bundle.events.find((e)=>e.type==="defense_decision"),decision=fw||def,outcome=decisionValue(decision);return{title:request?.payload?.tool||receipt?.payload?.tool||decision?.payload?.action?.tool||decision?.payload?.original_proposal?.tool||bundle.events.find((e)=>e.type==="model_output")?.type||"No execution",detail:`${outcome?outcome.toUpperCase()+" · ":""}${receipt||request?"executed/requested":"no executor receipt"}`,cls:outcome};}
+    function renderComparison(){if(!app.compareEvents.length){$("comparison").innerHTML='<div class="empty">Load a second JSONL file. For the video, use the paired <b>allow_all</b> and <b>SENTINEL</b> traces.</div>';return;}const a=stepEvidence(app.compareEvents),b=stepEvidence(app.events),steps=[...new Set([...a.keys(),...b.keys()])].sort((x,y)=>x-y);$("compareLabel").textContent=`${app.compareFilename} ↔ ${app.filename}`;$("comparison").innerHTML='<div class="compare-head"><span>Step</span><span>Comparison trace</span><span></span><span>Primary trace</span></div>'+steps.map((step)=>{const left=sideSummary(a.get(step)),right=sideSummary(b.get(step));return`<div class="compare-row"><span class="compare-step">step ${step}</span><div class="compare-side"><b>${safe(left.title)}</b><span class="${safe(left.cls)}">${safe(left.detail)}</span></div><div class="versus">VS</div><div class="compare-side"><b>${safe(right.title)}</b><span class="${safe(right.cls)}">${safe(right.detail)}</span></div></div>`;}).join("");}
+    function fmt(value){return value===null||value===undefined?"n/a":typeof value==="number"?value.toFixed(3):String(value);} function familyRows(card){const groups=new Map();(card.outcomes||[]).forEach((o)=>{const key=`${o.domain} · ${o.attack_family}${o.hard_negative?" · hard negative":""}`;if(!groups.has(key))groups.set(key,{count:0,attacks:0,tasks:0});const g=groups.get(key);g.count++;g.attacks+=Number(Boolean(o.attack_success));g.tasks+=Number(Boolean(o.task_success));});return[...groups.entries()].map(([name,g])=>`<tr><td>${safe(name)}</td><td>${g.count}</td><td>${g.attacks}</td><td>${g.tasks}/${g.count}</td></tr>`).join("");}
+    function renderScorecards(){if(!app.scorecards.length){$("scorecards").innerHTML='<div class="surface empty">Load scorecard JSON files to place the full system and ablations side by side.</div>';return;}$("scorecards").innerHTML=app.scorecards.map(({name,data})=>{const m=data.metrics||{};return`<article class="scorecard"><h3>${safe(data.defense||data.ablation||name)}</h3><div class="labels">model: ${safe(data.model||"not recorded")} · attacker/mode: ${safe(data.attacker||data.attack_mode||"not recorded")} · split: ${safe(data.split||"not recorded")} · ${safe(data.scenario_count||m.scenario_count||"?")} scenarios</div><div class="metric-grid">${[["BTU",m.btu],["ASR",m.asr],["CVR",m.cvr],["FBR",m.fbr],["TUI",m.tui]].map(([k,v])=>`<div class="metric"><b>${safe(fmt(v))}</b><span>${k}</span></div>`).join("")}</div><table><thead><tr><th>Domain · attack family</th><th>N</th><th>Attack success</th><th>Task success</th></tr></thead><tbody>${familyRows(data)||'<tr><td colspan="4">Per-outcome records not included.</td></tr>'}</tbody></table></article>`;}).join("");}
+    function render(){if(!app.events.length)return;const integrity=inspectIntegrity(app.events);$("dropzone").classList.add("hidden");$("workspace").classList.remove("hidden");renderHeader(integrity);renderStats(integrity);renderDecisionList();renderDecisionDetail();renderPlayback();renderTimeline();renderEventDetail();renderComparison();renderScorecards();}
+    async function loadPrimary(file,live=false){try{app.events=parseJsonl(await file.text(),live);app.filename=file.name;app.selectedEvent=app.events[0];app.selectedDecision=Math.min(app.selectedDecision,Math.max(0,currentChains().length-1));render();}catch(error){if(!live)window.alert(`Unable to open trace: ${error.message}`);}} async function loadCompare(file){try{app.compareEvents=parseJsonl(await file.text());app.compareFilename=file.name;renderComparison();activateTab("comparison");}catch(error){window.alert(`Unable to compare trace: ${error.message}`);}}
+    async function followLive(){if(!window.showOpenFilePicker){window.alert("Live follow requires Chrome or Edge with the File System Access API. You can still reopen the growing JSONL manually.");return;}try{const[handle]=await window.showOpenFilePicker({multiple:false,types:[{description:"SENTINEL JSONL",accept:{"text/plain":[".jsonl"]}}]});app.liveHandle=handle;app.liveSize=-1;$("followButton").classList.add("active");$("followButton").innerHTML='<span class="dot"></span> Following';const poll=async()=>{if(!app.liveHandle)return;const file=await app.liveHandle.getFile();if(file.size!==app.liveSize){app.liveSize=file.size;await loadPrimary(file,true);}app.liveTimer=setTimeout(poll,800);};await poll();}catch(error){if(error.name!=="AbortError")window.alert(`Unable to follow trace: ${error.message}`);}} function stopLive(){app.liveHandle=null;if(app.liveTimer)clearTimeout(app.liveTimer);app.liveTimer=null;$("followButton").classList.remove("active");$("followButton").innerHTML='<span class="dot"></span> Follow live';}
+    function activateTab(tab){app.tab=tab;document.querySelectorAll(".tab").forEach((b)=>b.classList.toggle("active",b.dataset.tab===tab));document.querySelectorAll(".panel").forEach((p)=>p.classList.toggle("active",p.id===`${tab}Panel`));}
+    $("fileInput").addEventListener("change",(e)=>{if(e.target.files?.[0]){stopLive();app.selectedDecision=0;loadPrimary(e.target.files[0]);}e.target.value="";});$("compareInput").addEventListener("change",(e)=>{if(e.target.files?.[0])loadCompare(e.target.files[0]);e.target.value="";});
+    $("scoreInput").addEventListener("change",async(e)=>{for(const file of e.target.files||[]){try{app.scorecards.push({name:file.name,data:JSON.parse(await file.text())});}catch(error){window.alert(`${file.name}: ${error.message}`);}}renderScorecards();activateTab("scoreboard");e.target.value="";});
+    $("captionInput").addEventListener("change",async(e)=>{const file=e.target.files?.[0];if(file){try{const data=JSON.parse(await file.text());app.captions=Array.isArray(data)?data:(data.captions||[]);renderPlayback();}catch(error){window.alert(`Unable to load captions: ${error.message}`);}}e.target.value="";});
+    $("followButton").addEventListener("click",()=>app.liveHandle?stopLive():followLive());$("welcomeLive").addEventListener("click",followLive);$("resetButton").addEventListener("click",()=>{stopLive();stopPlayback();app.events=[];app.compareEvents=[];app.scorecards=[];app.captions=[];app.selectedDecision=0;$("workspace").classList.add("hidden");$("dropzone").classList.remove("hidden");});
+    $("presenterButton").addEventListener("click",()=>{document.body.classList.toggle("presenter");$("presenterButton").textContent=document.body.classList.contains("presenter")?"Exit presenter":"Presenter mode";activateTab("story");});$("previousButton").addEventListener("click",()=>stepDecision(-1));$("nextButton").addEventListener("click",()=>stepDecision(1));$("playButton").addEventListener("click",()=>app.playing?stopPlayback():startPlayback());
+    document.querySelectorAll(".tab").forEach((b)=>b.addEventListener("click",()=>activateTab(b.dataset.tab)));document.querySelectorAll(".filter").forEach((b)=>b.addEventListener("click",()=>{app.filter=b.dataset.filter;document.querySelectorAll(".filter").forEach((x)=>x.classList.toggle("active",x===b));renderTimeline();}));$("search").addEventListener("input",(e)=>{app.query=e.target.value.trim().toLowerCase();renderTimeline();});
+    document.addEventListener("keydown",(e)=>{if(["INPUT","SELECT","TEXTAREA"].includes(document.activeElement?.tagName))return;if(e.key==="ArrowRight"){e.preventDefault();stepDecision(1);}else if(e.key==="ArrowLeft"){e.preventDefault();stepDecision(-1);}else if(e.code==="Space"){e.preventDefault();app.playing?stopPlayback():startPlayback();}});
+    ["dragenter","dragover"].forEach((name)=>$("dropzone").addEventListener(name,(e)=>{e.preventDefault();$("dropzone").classList.add("dragging");}));["dragleave","drop"].forEach((name)=>$("dropzone").addEventListener(name,(e)=>{e.preventDefault();$("dropzone").classList.remove("dragging");}));$("dropzone").addEventListener("drop",(e)=>{if(e.dataTransfer.files?.[0])loadPrimary(e.dataTransfer.files[0]);});
   </script>
 </body>
 </html>

@@ -47,6 +47,13 @@ class ArtifactStore:
             counter += 1
         return candidate
 
+    def prepare_event_path(self, group: str, run_id: str) -> Path:
+        """Return a validated unused path for an incrementally written event stream."""
+        path = self._path(group, f"{run_id}.jsonl")
+        if path.exists():
+            raise ArtifactError(f"event artifact already exists: {path}")
+        return path
+
     def write_events(self, group: str, run_id: str, events: Iterable[Event]) -> Path:
         path = self._path(group, f"{run_id}.jsonl")
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -18,6 +18,11 @@
     "validation_sha256": "f89ee10647b117ca5369f686f14e50c236d56eecdac49e3234e762c9625f0070",
     "validation_outcome_digest": "78004000cfd74b2036a7b1743edf9bec13a749453697897b778047a99c6739a7"
   },
+  "derived_analyses": {
+    "block_attribution_file": "results/block-attribution.json",
+    "block_attribution_sha256": "812eead905bfe3d6c77ba34ad662971c24df40d6ff85e7faa8b849a3c3a6f209",
+    "method": "Post-run organizer allowed_tools and evaluator labels; never supplied to the defense"
+  },
   "outcome_probes": [
     {
       "outcome": "ESCALATE",

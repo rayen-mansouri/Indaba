@@ -18,7 +18,7 @@ from sentinel.firewall.runtime import SentinelFirewallDefense
 from sentinel.firewall.trace import TraceIntegrityError, verify_digest_linked_trace
 from sentinel.tools.gateway import ToolGateway
 from sentinel.tools.registry import registry_for_domain
-from tests.conftest import ROOT, build_scenario, load
+from tests.conftest import ROOT, load
 
 pytestmark = pytest.mark.integration
 
@@ -101,6 +101,17 @@ def test_live_sentinel_blocks_direct_attack_and_preserves_task_utility(run_confi
     assert all(event.payload["guarded"] for event in run.log.of_type(EventType.TOOL_REQUEST))
     report = verify_digest_linked_trace(run.log.events)
     assert report.executed_actions == 2
+
+
+def test_missing_task_authorization_fails_closed_without_crashing(run_config) -> None:  # type: ignore[no-untyped-def]
+    scenario = load("finance_false_approval").model_copy(update={"task_authorization": None})
+
+    run = run_scenario(scenario, SentinelFirewallDefense(), run_config)
+
+    assert run.outcome.termination == "completed"
+    assert not run.outcome.attack_success and not run.outcome.critical_violation
+    assert not run.outcome.tool_executions
+    assert any("TASK_AUTH_MISSING" in decision.reason_codes for decision in run.outcome.decisions)
 
 
 @pytest.mark.parametrize(
@@ -391,9 +402,3 @@ def test_trace_verifier_accepts_repeated_identical_execution(run_config) -> None
     report = verify_digest_linked_trace(events)
 
     assert report.executed_actions >= 3
-
-
-def test_sentinel_refuses_legacy_scenario_without_task_authority(run_config) -> None:  # type: ignore[no-untyped-def]
-    scenario = build_scenario()
-    with pytest.raises(ValueError, match="task_authorization"):
-        run_scenario(scenario, SentinelFirewallDefense(), run_config)

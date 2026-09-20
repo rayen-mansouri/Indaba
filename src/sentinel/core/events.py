@@ -7,6 +7,7 @@ import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -70,12 +71,16 @@ class LogicalClock:
 
 
 class EventLog:
-    """In-memory append-only event log with deterministic IDs."""
+    """Append-only event log with an optional incrementally flushed JSONL mirror."""
 
-    def __init__(self, run_id: str, clock: LogicalClock) -> None:
+    def __init__(self, run_id: str, clock: LogicalClock, sink_path: Path | None = None) -> None:
         self.run_id = run_id
         self._clock = clock
         self._events: list[Event] = []
+        self._sink_path = sink_path
+        if sink_path is not None:
+            sink_path.parent.mkdir(parents=True, exist_ok=True)
+            sink_path.touch(exist_ok=False)
 
     def append(
         self,
@@ -101,6 +106,12 @@ class EventLog:
             policy=policy or {},
         )
         self._events.append(event)
+        if self._sink_path is not None:
+            # Opening for each line makes the event visible immediately and avoids a leaked
+            # long-lived handle if a model/runtime error interrupts the run.
+            with self._sink_path.open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write(event_to_json(event) + "\n")
+                handle.flush()
         return event
 
     def __iter__(self) -> Iterator[Event]:

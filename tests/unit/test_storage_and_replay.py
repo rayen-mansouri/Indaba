@@ -30,6 +30,19 @@ def sample_log() -> EventLog:
     return log
 
 
+def test_event_log_flushes_each_event_to_incremental_jsonl(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    sink = tmp_path / "live.jsonl"
+    log = EventLog("live-run", LogicalClock(7), sink_path=sink)
+
+    first = log.append(EventType.USER_MESSAGE, Actor.USER, 0, {"text": "hello"})
+    assert sink.read_text(encoding="utf-8").count("\n") == 1
+    assert first.event_id in sink.read_text(encoding="utf-8")
+
+    second = log.append(EventType.MODEL_OUTPUT, Actor.AGENT, 1, {"content": "done"})
+    lines = sink.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 2 and second.event_id in lines[1]
+
+
 def test_event_ids_and_timestamps_are_deterministic() -> None:
     a, b = sample_log(), sample_log()
     assert [e.model_dump() for e in a] == [e.model_dump() for e in b]

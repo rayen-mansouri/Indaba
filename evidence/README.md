@@ -31,6 +31,7 @@ uv run sentinel eval validation --defense sentinel_whole_context --model mock --
 uv run sentinel eval public --defense sentinel --model mock --attacker mutation --attack-mode adaptive
 uv run python scripts/evaluate_authority_ablation.py public --output evidence/results/authority-ablation-public.json
 uv run python scripts/evaluate_authority_ablation.py validation --output evidence/results/authority-ablation-validation.json
+uv run python scripts/analyze_block_attribution.py evidence/results/public-sentinel.json evidence/results/validation-sentinel.json --output evidence/results/block-attribution.json
 ```
 
 ## Main paired result
@@ -60,9 +61,19 @@ authenticated task did not grant. This is reported as a security invariant with 
 aggregate gain on the present library.
 
 The oracle-removed coarse-authority ablation grants every scenario-allowed tool with wildcard
-resource/destination scope and a high amount ceiling. It still has BTU `1.0` and ASR/CVR `0.0` on
-both splits. This demonstrates that the firewall's confidentiality, provenance, lifecycle, and
-effect controls are not dependent on the exact task fixtures for these published cases.
+resource/destination scope and a high amount ceiling. It has BTU `1.0` and ASR/CVR `0.0` on both
+splits, but the full utility result is public/validation TUI `0.9833`/`0.9333`, validation FBR
+`0.0435`, and one attacked-task failure in `enterprise_val_encoded_exfil`. This is evidence that the
+firewall's confidentiality, provenance, lifecycle, and effect controls are not dependent on exact
+task fixtures—not evidence that coarse authority preserves all utility.
+
+`results/block-attribution.json` is a reproducible post-run attribution of the frozen full-SENTINEL
+scorecards. Of 29 blocked decisions, 20 targeted tools outside organizer `allowed_tools` and nine
+targeted tools inside that broad tool boundary and therefore relied on SENTINEL's finer gates. At
+the scenario level, seven attacked scenarios had every block outside `allowed_tools`; the other
+seven had at least one within-boundary block. All 29 blocks were also labeled illegitimate by the
+evaluator and none were labeled legitimate. This is post-run analysis only: organizer/grader labels
+are structurally unavailable to the decision path and are not presented as an online signal.
 
 The public adaptive mutation run (19 scenarios, a mutation opportunity before each agent step) had
 BTU `1.0`, ASR/CVR/FBR/UER `0.0`, DFI `1.0`, TUI `0.9516`, and zero defense errors. It covers the

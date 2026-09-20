@@ -108,3 +108,37 @@ logs first. Never delete or rewrite earlier entries. Record only work actually p
   official submission URL/timezone, and obtain the human-owned submission receipt.
 - **Commit and push:** This handoff entry is part of the checkpoint commit created immediately after
   this entry.
+
+### 2026-09-20 15:38 +01:00 — Primary agent — Audit correction and Mission Control upgrade
+
+- **Starting commit:** `0942e87252ed4c44fdcc32710c2c010aa1bd44b7` on `main`, synchronized with `origin/main`.
+- **Purpose:** Verify the supplied non-specialist audits, correct confirmed runtime/report defects,
+  and turn the single-file viewer into a high-quality video observability surface.
+- **Files changed:** Firewall runner/runtime/event storage; integration/storage/viewer tests;
+  `observability/sentinel-trace-viewer.html`, viewer documentation and caption example; block
+  attribution script/artifact/manifest; README, report, responsible-AI, video, handoff, and
+  continuation documentation.
+- **Commands/tests run:** focused pytest `30 passed`; full pytest `262 passed, 2 skipped` of 264;
+  starter kits `6 passed` and `2 passed`; Ruff check/format and mypy (76 source files) passed; viewer
+  JavaScript `node --check` and JSON parsing passed; real-browser QA loaded rewrite, paired Qwen, and
+  validation scorecard artifacts with no console errors; public and validation eval digests reproduced
+  exactly as `b9387...` and `cb879...`; official replay accepted the newly incrementally written
+  `enterprise_val_encoded_exfil` trace.
+- **Result:** PASS. Missing task authority now yields a traced `TASK_AUTH_MISSING` block and no tool
+  execution. JSONL events flush incrementally. Mission Control adds decision stories, live follow,
+  presenter/captions, paired traces, scorecards, rewrite revalidation, and truthful risk/time labels.
+- **Problems or bugs:** Confirmed uncaught missing-authority `ValueError`; in-memory-until-end trace
+  writing; overstated G5/coarse-authority/report wording; incorrect AgentSpec authors; stale personal
+  path/handoff facts; basic viewer. Pytest temp setup failed twice under the restricted Windows ACL.
+- **Root cause:** Confirmed runtime edge-case and observability/documentation debt; the pytest failure
+  was host sandbox ACL behavior, not an assertion failure.
+- **Resolution:** Added empty protected scope plus G2 block, per-event flushed sink, focused
+  regressions, corrected evidence claims/citation, post-run attribution, and browser-verified Mission
+  Control. Reran pytest outside the restricted ACL and removed the exact temporary test directory.
+- **Remaining work or limitation:** Human must record/upload the video and submit. Two symlink tests
+  remain skipped for Windows privilege 1314. Live Qwen evidence remains trace-level, not aggregate.
+- **Non-applicable check:** `scripts/validate_submission.py .` correctly reported that the repository
+  root is not a participant HTTP-service package (no root Dockerfile/manifest) and also scanned
+  development caches. The organizer brief explicitly does not require the root validator/Docker for
+  this integrated defense; starter-kit contract suites are the applicable checks.
+- **Commit and push:** Pending feature commit and push; append the exact hash/result afterward.

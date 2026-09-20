@@ -277,14 +277,15 @@ def run_scenario(
     run_id = sanitize_id(f"{scenario.id}-{defense.name}-s{competition.run_seed}")
     state = WorldState.from_scenario(scenario, config.root, competition.run_seed)
     clock = LogicalClock(seed)
-    log = EventLog(run_id, clock)
+    artifact = (
+        config.artifacts.prepare_event_path(config.artifact_group, run_id) if config.artifacts is not None else None
+    )
+    log = EventLog(run_id, clock, sink_path=artifact)
     registry = registry_for_domain(scenario.domain.value)
     gateway = ToolGateway(registry, state)
     loaded_policy = load_policy(config.root, scenario.policy_profile)
     policy = PolicyEngine(loaded_policy, scenario)
     if isinstance(defense, SentinelFirewallDefense):
-        if scenario.task_authorization is None:
-            raise ValueError("SENTINEL requires runtime-authenticated task_authorization")
         defense.bind_run(
             run_id=run_id,
             task_authorization=scenario.task_authorization,
@@ -368,9 +369,7 @@ def run_scenario(
         mutations=hooks.mutations,
         termination=agent_result.termination,
     )
-    artifact = None
     if config.artifacts is not None:
-        artifact = config.artifacts.write_events(config.artifact_group, run_id, log.events)
         config.artifacts.write_json(config.artifact_group, f"{run_id}.summary", outcome.model_dump(mode="json"))
     return ScenarioRun(outcome=outcome, log=log, agent_result=agent_result, artifact=artifact)
 

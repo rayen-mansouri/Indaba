@@ -224,3 +224,39 @@ Read `AGENTS.md` and `SENTINEL_BUILD_AGENT_PROTOCOL.md` before coding. Update th
 - **Root cause:** Known — canary destination restrictions were attached to the whole JSON observation rather than the specific scalar field containing the canary.
 - **Resolution or next action:** Parse structured tool observations into field-scoped extraction nodes. Each node preserves parent trust, sensitivity, and lineage; only a field that actually carries a canary inherits its destination restriction. The formerly failing scenario and both complete libraries now pass. Next run the unchanged Qwen3-8B reference model, then freeze raw evidence and build the observability/report/video artifacts.
 - **Scope cut or limitation:** Results above use the deterministic mock model and are not reported as Qwen3-8B or final benchmark results. The two Windows symlink tests remain skipped because this host lacks symlink privilege. Risk scores are deterministic gate bands, not empirically calibrated probabilities. The task-authority fixtures are explicit authoring inputs; their scenario-keyed generator is not called or visible during policy selection or decisions.
+
+### 2026-09-20 15:38:00 +01:00 — Phase 5/6 — Audit correction, incremental trace, and Mission Control
+
+- **Purpose:** Validate the latest external AI audit against current code, fix confirmed runtime and
+  truthfulness gaps, and upgrade observability for the 5–10 minute submission video.
+- **Plan requirement(s):** Fail-safe missing authority; replay-compatible trusted trace; usable
+  observability; accurate report/limitations; reproducible evidence; tested final delivery.
+- **Files changed:** `src/sentinel/core/events.py`; `src/sentinel/evaluator/runner.py`;
+  `src/sentinel/firewall/runtime.py`; `src/sentinel/storage/runs.py`; focused tests;
+  `observability/`; block-attribution analysis/artifact; README/report/video/responsible-AI/evidence/
+  handoff documentation.
+- **Commands/tests run:** focused pytest (`30 passed`); main pytest (`262 passed, 2 skipped`, 264
+  collected); starter kits (`6 passed`, `2 passed`); Ruff lint/format; mypy (76 source files); Node
+  syntax and JSON parse; real browser with committed rewrite, paired-Qwen, and scorecard files;
+  public/validation eval; official replay of a newly written trace.
+- **Result:** PASS. Deterministic outcome digests remain public
+  `b9387da4ac08f34064769c61c562a788937a61d4b4b7cc09f5dc3804517b0d5f` and validation
+  `cb8791a524e037b9b82c47a98831e37c182e2a9ba586689af3e6111cfd224f3b`.
+- **Run, trace, configuration, or commit ID:** Verification groups
+  `eval-public-sentinel-20260920T143514Z` and `eval-validation-sentinel-20260920T143528Z`;
+  attribution artifact SHA-256 `812eead905bfe3d6c77ba34ad662971c24df40d6ff85e7faa8b849a3c3a6f209`.
+- **Decision:** Keep authorization out of natural-language goals; represent absent authority with an
+  empty protected scope. Keep risk as deterministic severity and timestamps as logical time. Show
+  only emitted trace stages and identify the Python verifier as authoritative.
+- **Problem observed:** Missing task authorization raised before a decision; trace JSONL appeared only
+  after the run; audit/report language overstated G5 and the coarse-authority utility result; the
+  viewer lacked comparison, scorecard, presentation, and live-follow features.
+- **Root cause:** Known — runner precondition exception, end-of-run artifact serialization, and
+  observability/documentation debt. Windows sandbox ACL caused two invalid pytest setup attempts.
+- **Resolution or next action:** Added tested fail-closed behavior, incremental flush, Mission Control,
+  corrected claims/citation, and reproducible post-run block attribution. Next record the video from
+  `docs/video-script.md`, upload through the team's accounts, and preserve the submission receipt.
+- **Scope cut or limitation:** No full-Qwen aggregate, AgentDojo run, server dashboard, or signed
+  append-only log is claimed. Two symlink tests still require a capable host. The repository-root
+  submission validator is non-applicable to this integrated defense and predictably reports missing
+  root Dockerfile/manifest; the two starter-kit service contracts pass instead.

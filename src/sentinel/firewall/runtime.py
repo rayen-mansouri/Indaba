@@ -101,6 +101,23 @@ def _task_scope(authority: TaskAuthorizationSpec) -> TaskScope:
     )
 
 
+def _missing_task_scope(run_id: str) -> TaskScope:
+    """Fail-closed authority envelope used when authenticated task scope is absent."""
+    task_digest = hashlib.sha256(f"missing-task-authority:{run_id}".encode()).hexdigest()[:16]
+    return TaskScope(
+        task_id=f"tsk_{task_digest}",
+        principal=AuthenticatedPrincipal(
+            principal_id="unauthenticated",
+            role="no_authority",
+            authenticated_by="offline_simulator_missing_authority_guard",
+        ),
+        grants=(),
+        approval_roles=(),
+        delegation_roles=(),
+        issued_state_version=0,
+    )
+
+
 class SentinelFirewallDefense(Defense):
     """Deterministic action firewall. A run must bind trusted state before use."""
 
@@ -137,12 +154,13 @@ class SentinelFirewallDefense(Defense):
         self._permit_counter = 0
         self._state_version = 0
         self._succeeded_tools: list[str] = []
+        self._task_auth_missing = False
 
     def bind_run(
         self,
         *,
         run_id: str,
-        task_authorization: TaskAuthorizationSpec,
+        task_authorization: TaskAuthorizationSpec | None,
         policy: Policy,
         allowed_tools: tuple[str, ...],
         registry: ToolRegistry,
@@ -155,7 +173,8 @@ class SentinelFirewallDefense(Defense):
             raise RuntimeError("a SENTINEL defense instance cannot be rebound")
         manifest = build_official_tool_manifest()
         snapshot = PolicySnapshot.capture(run_id, policy, manifest, allowed_tools)
-        scope = _task_scope(task_authorization)
+        self._task_auth_missing = task_authorization is None
+        scope = _task_scope(task_authorization) if task_authorization is not None else _missing_task_scope(run_id)
         unknown_grants = sorted({grant.tool for grant in scope.grants} - set(snapshot.allowed_tools))
         if unknown_grants:
             raise ValueError(f"task scope grants tools outside active policy: {unknown_grants}")
@@ -212,6 +231,32 @@ class SentinelFirewallDefense(Defense):
             self._graph,
             self._adapters,
             self._evaluator,
+        )
+
+    def _mark_missing_task_authority(self, evaluation: GateEvaluation) -> GateEvaluation:
+        """Attach a legible fail-closed reason to the task-scope gate result."""
+        gates = []
+        for gate in evaluation.gate_results:
+            if gate.gate.value == "G2":
+                gates.append(
+                    gate.model_copy(
+                        update={
+                            "passed": False,
+                            "reason_codes": tuple(dict.fromkeys((*gate.reason_codes, "TASK_AUTH_MISSING"))),
+                            "risk_basis": tuple(dict.fromkeys((*gate.risk_basis, "authenticated_task_scope=missing"))),
+                        }
+                    )
+                )
+            else:
+                gates.append(gate)
+        return evaluation.model_copy(
+            update={
+                "outcome": Decision.BLOCK,
+                "reason_codes": tuple(dict.fromkeys((*evaluation.reason_codes, "TASK_AUTH_MISSING"))),
+                "risk_score": 1.0,
+                "confidence": 1.0,
+                "gate_results": tuple(gates),
+            }
         )
 
     @staticmethod
@@ -570,6 +615,8 @@ class SentinelFirewallDefense(Defense):
                 request.step_id,
                 decision_time,
             )
+            if self._task_auth_missing and original.executable.type is ActionType.TOOL_CALL:
+                evaluation = self._mark_missing_task_authority(evaluation)
         except ActionNormalizationError as exc:
             raw = request.candidate_action
             normalized = NormalizedAction(

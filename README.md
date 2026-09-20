@@ -39,7 +39,7 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
-latest 2026-09-20 regression collected 262 tests: `260 passed, 2 skipped`; both skips require
+latest 2026-09-20 regression collected 264 tests: `262 passed, 2 skipped`; both skips require
 Windows symlink privilege.
 See [BUILD_LOG.md](BUILD_LOG.md) for exact commands and limitations, the
 [technical report](docs/technical-report.md) for methods/results, the
@@ -58,13 +58,16 @@ as protected input by the offline simulator boundary. It grants tools and capabi
 and can constrain resources, destinations, amounts/currency, and selected parameters. It contains
 no scenario ID, filename,
 attack label, expected outcome, success condition, or reference plan. Other baseline defenses can
-still parse legacy scenarios without this optional field; the SENTINEL runtime will require it.
+still parse legacy scenarios without this optional field; SENTINEL treats a missing envelope as a
+protected empty scope and returns a traced `TASK_AUTH_MISSING` block instead of crashing.
 
 The live core also includes strict action normalization, trusted destination aliases,
 lineage-preserving decoding/transformation nodes, a protected one-time approval store, and
 deterministic G1–G7 evaluation. Policy-owned rewrites are validated from scratch and cannot fall
 back to the original action. Security events form a digest-linked proposal → decision → approval or
 rewrite → executor receipt → verified-state chain, checked by `verify_digest_linked_trace`.
+The JSONL is appended and flushed after every event, enabling the offline viewer's live-follow mode;
+event timestamps are deterministic logical time, not wall-clock latency.
 
 The frozen mock-model diagnostic covers all 28 shipped scenarios: public and validation ASR `0.0`,
 BTU `1.0`, with no task failures or defense errors. A public adaptive mutation run also has ASR

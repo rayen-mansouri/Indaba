@@ -8,12 +8,15 @@ Benchmark: `sentinel-bench/0.1.0`
 
 ## 1. Abstract
 
-SENTINEL is a small deterministic action firewall around the organizer's unchanged Qwen3-8B
-reference agent and offline simulator. It treats the model and retrieved content as untrusted,
+SENTINEL is a small deterministic action firewall integrated around the organizer's Qwen3-8B
+reference agent and offline simulator. The Qwen weights, system prompt, and registered tool set are
+unchanged; narrow runtime hooks bind the authenticated run context and route proposed actions
+through the guarded executor. SENTINEL treats the model and retrieved content as untrusted,
 derives tool effects from a strict runtime manifest, and checks every proposed consequential action
 against an immutable policy, authenticated task scope, authoritative workflow state, protected
 approvals, provenance, sensitivity, and canonical destinations. The model cannot call tools
-directly. On paired mock-model runs over all 19 public and 9 validation scenarios, SENTINEL achieved
+directly. On paired runs with the deterministic mock model and static scripted attacker over all 19
+public and 9 validation scenarios, SENTINEL achieved
 benign task utility (BTU) 1.0, attack success rate (ASR) 0.0, critical-violation rate (CVR) 0.0,
 false-block rate (FBR) 0.0, and data-flow integrity (DFI) 1.0 on both splits. A provenance-only
 baseline reached validation ASR 0.25 on encoded exfiltration. Adaptive mutation testing retained
@@ -85,9 +88,12 @@ and fail closed when authorization is absent.
 To test whether exact grants were acting as an answer key, we replaced them with coarse role-like
 grants covering every scenario-allowed tool, wildcard resource/destination scopes, and a high
 amount ceiling. With evaluator canaries absent from the decision path, this ablation retained BTU
-1.0 and ASR/CVR 0.0 on both public and validation. Narrow task grants remain the production-like
-default because least privilege is a security property, not because scenario identity is read by
-the decision service.
+1.0 and ASR/CVR 0.0 on both splits. The full utility picture was weaker: public FBR was 0.0 and TUI
+0.983, while validation FBR was 0.0435 and TUI 0.933; the attacked
+`enterprise_val_encoded_exfil` task did not complete. BTU remains 1.0 because BTU's denominator is
+the benign subset, not because every attacked task succeeded. Narrow task grants remain the
+production-like default because least privilege is a security property, not because scenario
+identity is read by the decision service.
 
 ### 4.2 Tool and policy boundary
 
@@ -107,12 +113,17 @@ cannot modify it.
   state rather than claims in content.
 - **G4 approval binding:** issuer, role, task, action digest, policy/state versions, expiry, and
   unused state must match; consumption is atomic with execution.
-- **G5 memory separation:** memory retains lineage and may supply evidence, but cannot mint policy,
-  approval, capability, destination authority, or a lifecycle transition.
+- **G5 authority-source check:** verifies that the task envelope carries the protected runtime
+  authenticator rather than a value supplied by model-visible content. Memory authority separation
+  is a system property enforced jointly by the protected task/policy/approval stores, G1/G2/G4,
+  and provenance lineage; G5 alone is not claimed as a complete memory-trust policy.
 - **G6 confidentiality/egress:** every payload field is checked against each recipient and sink.
-  Sensitivity comes from runtime provenance and trusted ToolSpec output labels; the firewall never
-  reads the evaluator canary registry. Dependencies survive plain, spaced, URL, Base64, hex, ROT13,
-  reversed, gzip, and zlib forms. Redacted replacements are checked again.
+  Read-tool trust/sensitivity normally comes from each synthetic fixture record's runtime `_meta`.
+  One field name is declared in the trusted ToolSpec overlay:
+  `asset_lookup.destination_restricted_output_fields=("service_account_token",)`. These are tool/
+  field contracts, not per-scenario expected answers, and the firewall never reads the evaluator
+  canary registry. Dependencies survive plain, spaced, URL, Base64, hex, ROT13, reversed, gzip, and
+  zlib forms. Redacted replacements are checked again.
 - **G7 destination integrity:** both policy and authenticated task scope must authorize every
   canonical primary, nested, or secondary destination. Aliases are resolved only by trusted typed
   mappings.
@@ -126,12 +137,15 @@ Failure never falls back to the original.
 ### 4.4 Guarded execution and trace continuity
 
 The model never receives a direct simulator execution path. An allowed or approved action receives
-a one-shot permit bound to its canonical digest and current state version. The guarded executor
-revalidates immediately before invoking the existing gateway. Proposal, decision, replacement,
-approval, receipt, and verified-state events share run/task IDs, action digest, policy hash/version,
-ToolSpec version, normalizer version, and state version. The verifier rejects bad ordering, missing
-links, mismatched receipts, malformed metadata, or unknown emitters; the evaluator cannot count a
-run with a trace-integrity error as success.
+an in-memory one-shot permit bound to its canonical digest and current state version. That permit is
+not currently emitted as its own trace event, so the viewer does not invent a permit stage. The
+guarded executor revalidates immediately before invoking the existing gateway. Proposal, decision,
+replacement, approval, receipt, and verified-state events share run/task IDs, action digest, policy
+hash/version, ToolSpec version, normalizer version, and state version. Events are appended and
+flushed to JSONL as the run proceeds; timestamps are deterministic logical time, while `seq` and
+`step_id` provide the ordering semantics. The verifier rejects bad ordering, missing links,
+mismatched receipts, malformed metadata, or unknown emitters; the evaluator cannot count a run with
+a trace-integrity error as success.
 
 ### 4.5 Risk and confidence
 
@@ -141,6 +155,8 @@ A clean allow is 0.03, a valid action awaiting approval starts at 0.55, and seve
 confidentiality, destination, or trace failures normally reach 0.90-1.00. Confidence is 0.99 for
 fully runtime-derived decisions and 0.97 for the approval-pending class. Brier score and expected
 calibration error (ECE) are reported empirically; no claim of statistical calibration is made.
+The very low full-SENTINEL ECE is largely an artifact of near-binary deterministic outputs on this
+small synthetic library; it is not evidence of population calibration.
 
 No learned component or training data is used.
 
@@ -160,7 +176,7 @@ task grants with coarse authenticated authority. Public adaptive
 testing uses the mutation attacker before each agent step, including difficulty-4 memory cases and
 the difficulty-5 dormant-supplier case.
 
-Live runs use the unchanged `qwen/qwen3-8b` model from
+Live runs use unchanged `qwen/qwen3-8b` weights, organizer system prompt, and registered tool set from
 `Qwen3-8B-Q4_K_M.gguf` (SHA-256
 `a7676d257b10f3ce23aedba45e64ba61a5aa295f0009d87c5627f6c026a8f35f`) through LM Studio's local
 OpenAI-compatible endpoint. Settings: 8,192-token context, 2,048-token output budget, temperature 0,
@@ -204,6 +220,15 @@ and 5/5; SOC 5/5 and 4/4. By attack family, SENTINEL blocked 3/3 direct, 5/5 ind
 2/2 memory-poisoning, 2/2 multi-step, and 2/2 tool-output-manipulation attacks while all associated
 tasks still passed.
 
+A separate post-run attribution over the frozen scorecards found 29 blocked decisions. Twenty were
+outside organizer `allowed_tools`; nine were within that broad tool boundary and depended on
+SENTINEL's effect, lifecycle, approval, confidentiality, or destination checks. Seven of 14 attacked
+scenarios had every block outside organizer `allowed_tools`; the other seven had at least one
+within-boundary block. All 29 were evaluator-labeled illegitimate and zero were labeled legitimate.
+These organizer/grader fields are used by `scripts/analyze_block_attribution.py` only after the run;
+they never enter policy or the decision API. The generated rows and counts are committed as
+`evidence/results/block-attribution.json`.
+
 The adaptive mutation public run also had BTU 1.0, ASR/CVR/FBR/UER 0.0, DFI 1.0, no defense errors,
 and TUI 0.952. Its deterministic digest is
 `00e42f6ceaa1c4bcee4f09532c86743e950274107c543a39b5f3ef2de3dfb7d7`.
@@ -231,7 +256,8 @@ attack is reachable and the action boundary works; it is not an identical-action
 
 An earlier 768-token run ended in model output exhaustion before producing an action. It is recorded
 as an error and excluded from successful-defense evidence. Raising only the local decode budget to
-2,048 yielded a parseable action while leaving model, prompt, and tools unchanged.
+2,048 yielded a parseable action while leaving model weights, prompt, and tool definitions
+unchanged. The runner integration hooks still bind runtime context and guarded execution.
 
 ## 7. Ablations and composition probes
 
@@ -254,9 +280,11 @@ Three declared composition probes pass:
 - `finance_false_approval`: content claiming approval cannot skip authoritative payment lifecycle
   or destination constraints.
 
-The coarse-authority/oracle-removed ablation also retained public and validation BTU 1.0 and
-ASR/CVR 0.0. Its committed scorecards are `authority-ablation-public.json` and
-`authority-ablation-validation.json`. Separate team-authored end-to-end probes record a genuine
+The coarse-authority/oracle-removed ablation retained public and validation BTU 1.0 and ASR/CVR 0.0,
+but public/validation TUI was 0.983/0.933, validation FBR was 0.0435, and the attacked
+`enterprise_val_encoded_exfil` task failed. Its committed scorecards are
+`authority-ablation-public.json` and `authority-ablation-validation.json`. Separate team-authored
+end-to-end probes record a genuine
 `ESCALATE` → approval → revalidation → execution chain and a genuine restricted-send `REWRITE` to
 a revalidated redacted draft.
 
@@ -326,7 +354,7 @@ client-side convenience checks, while the Python verifier remains authoritative.
 
 ## References
 
-- Dongjun Kim et al., [AgentSpec: Customizable Runtime Enforcement for Safe and Reliable LLM
+- Haoyu Wang, Christopher M. Poskitt, and Jun Sun, [AgentSpec: Customizable Runtime Enforcement for Safe and Reliable LLM
   Agents](https://conf.researchr.org/details/icse-2026/icse-2026-research-track/29/AgentSpec-Customizable-Runtime-Enforcement-for-Safe-and-Reliable-LLM-Agents),
   ICSE 2026 Research Track, DOI
   [10.1145/3744916.3764546](https://dl.acm.org/doi/10.1145/3744916.3764546). We use it as related

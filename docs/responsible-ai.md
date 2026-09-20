@@ -44,7 +44,15 @@ actions, gate facts, severity, confidence, and short reason codes are recorded.
 
 The safe failure mode is non-execution. Crashes, parse failures, timeouts, malformed metadata,
 unknown tools/sensitivity, missing provenance, and trace discontinuity never count as successful
-defense runs.
+defense runs. A missing authenticated task envelope is converted into an empty protected scope and
+a traced `TASK_AUTH_MISSING` block; it does not become authority and does not crash the evaluator.
+
+Memory separation is a boundary property, not a semantic claim that one gate understands memory.
+The protected stores and G1/G2/G4 prevent model-visible memory from minting authority or approval;
+G5 narrowly checks the runtime-owned task authenticator. Read-tool sensitivity normally comes from
+each synthetic fixture record's `_meta`; the one baked field contract is
+`asset_lookup.service_account_token` in the trusted ToolSpec overlay. These labels are propagated
+through observed transformations and do not consult evaluator canaries.
 
 ## Evaluation boundaries
 

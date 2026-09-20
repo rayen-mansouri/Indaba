@@ -1,7 +1,7 @@
 # Continuation prompt for the next implementation agent
 
-You are continuing the SENTINEL IndabaX Tunisia 2026 project in
-`C:\Users\Mega Pc\Desktop\IndabaX2026` on branch `main`.
+You are continuing the SENTINEL IndabaX Tunisia 2026 project from the repository root on branch
+`main`. Do not assume a personal absolute path; discover the checkout with `git rev-parse --show-toplevel`.
 
 Work autonomously, but preserve the project's security rules and evidence integrity. Read these
 files fully before changing anything:
@@ -32,8 +32,8 @@ protocol as well.
 
 ## Current checkpoint
 
-- Latest pushed commit: `b94318a` (`add reproducible evidence and submission materials`) on
-  `origin/main`.
+- Latest pushed checkpoint before the Mission Control unit: `0942e87` on `origin/main`. Verify the
+  current `HEAD` and `origin/main`; a later log entry records the Mission Control commit and push.
 - Evidence-generating code commit: `c05a0b59d2f9b464d2099158ad123f26cc71ba3c`.
 - Official starter commit: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Custom defense is fully wired as `--defense sentinel`; it is not an unused library.
@@ -44,14 +44,15 @@ protocol as well.
 - `ALLOW`, `BLOCK`, `ESCALATE`, and `REWRITE` all have exercised paths.
 - Live local Qwen3-8B adapter works through LM Studio without changing model, organizer system
   prompt, or tool set. Exact model/settings/hash are in `docs/model-data-declaration.md`.
-- Offline viewer: `observability/sentinel-trace-viewer.html`.
+- Offline viewer: `observability/sentinel-trace-viewer.html`; it now includes live follow,
+  presenter playback/captions, paired trace comparison, and a multi-scorecard dashboard.
 - Report/declarations/video plan: `docs/technical-report.md`, `docs/responsible-ai.md`,
   `docs/model-data-declaration.md`, `docs/video-script.md`.
 - Frozen scorecards/traces and all deterministic digests: `evidence/`.
 
 ## Verified results; do not rerun just to rediscover them
 
-- Main working-tree suite: 257 collected, `255 passed, 2 skipped`. Both skips are Windows symlink
+- Main working-tree suite: 264 collected, `262 passed, 2 skipped`. Both skips are Windows symlink
   privilege error 1314, not assertion failures.
 - Starter kits: Python defense `6 passed`; learned monitor `2 passed`.
 - Ruff lint and format: pass. Mypy: pass across 76 source files.
@@ -67,8 +68,8 @@ protocol as well.
   DFI 0.8889.
 - Whole-context validation ablation causes BTU 0.8 and FBR 0.0435; field-aware SENTINEL remains
   BTU 1.0.
-- Viewer JavaScript passes `node --check`, makes no `fetch` call, and its initial UI was visually
-  inspected in a real browser.
+- Viewer JavaScript passes `node --check`, makes no network request, and was browser-tested with a
+  real rewrite trace, paired Qwen traces, and validation scorecards; no console errors were present.
 
 ## Important interpretation
 
@@ -84,32 +85,27 @@ now stale: wiring, rewrite, graded risk, G5 evidence, value-level decoding, Qwen
 comparative results, report, and dashboard/viewer all exist. Treat the reviews as hypotheses and
 verify current code before acting.
 
-## Exact state when the previous agent stopped
+## Exact state at this checkpoint
 
-- `.gitignore` was edited to add `.clean-check/` but that edit was not yet committed at the moment
-  this handoff prompt was created. It should be included in this checkpoint commit.
-- A fresh clone exists at `.clean-check`, checked out at `b94318a`.
-- `uv sync --frozen` completed successfully inside that clone with Python 3.12.14 and 45 packages.
-- The full fresh-clone pytest command was started, but the user intentionally stopped the agent
-  after about 0.7 seconds. Its result is **unknown**; do not record it as pass or fail.
-- No known code/runtime blocker exists.
+- The earlier fresh-clone gate was completed and recorded: `255 passed, 2 skipped`, plus starter-kit
+  suites `6 passed` and `2 passed`.
+- The current working-tree gate after the Mission Control/fail-closed unit is `262 passed, 2 skipped`
+  of 264, with both starter-kit suites, Ruff, format, mypy, Node syntax, official replay, and public/
+  validation deterministic-digest reproduction passing.
+- Public and validation digests remain `b9387...` and `cb879...`; frozen scorecard outcomes were not
+  rewritten. New evaluation artifacts under `artifacts/` are local verification output only.
+- No known code/runtime blocker exists. The remaining submission video and upload are human-owned.
 
 ## Next tasks, in order
 
 1. Confirm `git status`, `git log -1`, and `origin/main`. Do not overwrite user changes.
-2. Resume the clean-check only if the user has enough token budget and wants work to continue:
-   run the full suite from `.clean-check`, then starter-kit tests and one SENTINEL smoke/eval. Record
-   the actual result. The two symlink tests may still skip on this host.
-3. If the fresh clone passes, update `AI_CONTINUATION_LOG.md`, `BUILD_LOG.md`, and
-   `docs/TEAM_HANDOFF.md`; commit and push. Remove `.clean-check` only after resolving its absolute
-   path inside this workspace and only if cleanup is desired.
-4. Do not alter frozen scorecards unless code changes invalidate them. If they do, regenerate all
+2. Do not alter frozen scorecards unless code changes invalidate them. If they do, regenerate all
    paired evidence from the same starting state and update every digest/report claim together.
-5. Use `docs/video-script.md` to help the team record a 5-10 minute video. The recording must show a
+3. Use `docs/video-script.md` and Mission Control to help the team record a 5-10 minute video. The recording must show a
    benign Qwen task, the Qwen attack reaching SENTINEL, the decision/reason codes, secure outcome,
    approval/lifecycle/rewrite, comparison/ablation, and an honest limitation. Label mock vs Qwen and
    replay vs adaptive execution accurately.
-6. Confirm the official submission URL and deadline timezone with the organizers. Do not invent
+4. Confirm the official submission URL and deadline timezone with the organizers. Do not invent
    them. Actual upload/submission and receipt require the user's accounts and explicit involvement.
 
 ## Known limitations and intentional cuts
@@ -119,8 +115,8 @@ verify current code before acting.
 - One non-violating attacker-influenced draft makes public TUI 0.983; this is reported honestly.
 - Risk scores are deterministic policy-severity ranks, not learned probabilities.
 - Two Windows symlink tests need a symlink-capable host for full platform coverage.
-- AgentDojo, Tier-2 intervention, a server dashboard, and extended visual polish were intentionally
-  cut under the project's scope-control rules.
+- AgentDojo, Tier-2 intervention, and a server-hosted dashboard were intentionally cut under the
+  project's scope-control rules; the delivered single-file Mission Control remains offline.
 - Actual video recording/upload and official submission receipt are external human-account steps.
 
 Commit each tested feature-sized unit and push to `origin/main` without force-pushing.
