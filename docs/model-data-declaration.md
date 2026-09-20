@@ -17,9 +17,14 @@ Evidence date: 20 September 2026
   schemas; no tool was added or removed.
 - Thinking: runtime-managed Qwen reasoning may be returned in a separate API field. The adapter
   ignores it and records only the final JSON action; chain-of-thought is not persisted.
+- Agent invariants: unchanged Qwen3-8B model identity, organizer system prompt, and organizer tool
+  set; no additional agent-side safety instructions.
 
 No model fine-tuning, adapter training, classifier training, or external inference API was used.
 The quantized local artifact is not committed to the repository.
+The optional Colab path uses Hugging Face NF4 4-bit loading on a T4, thinking disabled, greedy
+decoding, and the configured generation budget. Colab output is not included in the frozen results
+unless its exact runtime settings and per-scenario `allow_all` reachability control are recorded.
 
 ## Deterministic evaluation model
 

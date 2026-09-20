@@ -44,6 +44,12 @@ The `allow_all` sanity baseline has ASR `1.0` on both splits, with public CVR `0
 CVR `0.4444`. This confirms the attack actions actually reach the simulator when no defense stops
 them; the secure results are not caused by inert scenarios.
 
+After the evidence freeze, an authority-envelope audit removed six SOC
+`incident_create.severity` constraints that reflected reference-plan analytical answers rather than
+authenticated authority. Regenerating the six affected scenarios changed their opaque task hashes
+but did not change any deterministic scorecard outcome digest. The evidence files remain the frozen
+paired runs; this post-freeze verification is documented in the technical report.
+
 The provenance baseline also had public ASR `0.0`, but on validation it had ASR `0.25`, CVR
 `0.1111`, DFI `0.8889`, and TUI `0.875`. Its failure is
 `enterprise_val_encoded_exfil`: a Base64-transformed protected value reached an unauthorized sink.

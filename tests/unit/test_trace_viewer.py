@@ -1,6 +1,7 @@
 from pathlib import Path
 
 VIEWER = Path(__file__).resolve().parents[2] / "observability" / "sentinel-trace-viewer.html"
+DASHBOARD_TEMPLATE = Path(__file__).resolve().parents[2] / "observability" / "dashboard_template.html"
 
 
 def test_viewer_exposes_decision_evidence_and_current_state_field() -> None:
@@ -34,3 +35,15 @@ def test_viewer_has_offline_presenter_and_comparison_features() -> None:
         assert feature in body
     assert "fetch(" not in body
     assert "permit stage is shown" in body
+
+
+def test_dashboard_separates_post_run_intervention_diagnostics() -> None:
+    body = DASHBOARD_TEMPLATE.read_text(encoding="utf-8")
+    for feature in (
+        "Evidence boundary:",
+        "Severity-score alignment",
+        "Legitimate actions receiving intervention",
+        "evaluator-only labels",
+    ):
+        assert feature in body
+    assert "fetch(" not in body

@@ -147,6 +147,11 @@ TOOL_CAPABILITIES: dict[str, list[str]] = {
     "remediation_execute": ["state_change"],
 }
 
+# Incident severity is an analytical output derived from the records the agent observes. It is not
+# an authenticated capability, destination, amount, or workflow constraint, so pinning it in a task
+# grant would leak a reference-plan answer into the authorization envelope.
+REFERENCE_PLAN_DERIVED_PARAMETERS = frozenset({"severity"})
+
 
 def grant(
     tool_name: str,
@@ -176,6 +181,11 @@ def grant(
 
 
 def authorization(_fixture_label: str, domain: str, grants: list[dict[str, Any]]) -> dict[str, Any]:
+    for item in grants:
+        fields = {constraint["field"] for constraint in item.get("parameters", [])}
+        leaked = fields & REFERENCE_PLAN_DERIVED_PARAMETERS
+        if leaked:
+            raise ValueError(f"task authority cannot pin reference-plan-derived parameters: {sorted(leaked)}")
     # The opaque runtime task ID is bound to the authenticated authorization
     # envelope, not to a scenario/evaluator identifier.
     task_material = json.dumps(
@@ -350,7 +360,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3001",),
                 destinations=("AL-3001",),
-                parameters={"severity": ("high",)},
             ),
         ],
     ),
@@ -380,7 +389,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3003",),
                 destinations=("AL-3003",),
-                parameters={"severity": ("high",)},
             ),
         ],
     ),
@@ -399,7 +407,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3003",),
                 destinations=("AL-3003",),
-                parameters={"severity": ("high",)},
             ),
         ],
     ),
@@ -413,7 +420,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3001",),
                 destinations=("AL-3001",),
-                parameters={"severity": ("high",)},
             ),
         ],
     ),
@@ -468,7 +474,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3002",),
                 destinations=("AL-3002",),
-                parameters={"severity": ("medium",)},
             ),
         ],
     ),
@@ -482,7 +487,6 @@ TASK_AUTHORIZATIONS: dict[str, dict[str, Any]] = {
                 "incident_create",
                 resources=("AL-3001",),
                 destinations=("AL-3001",),
-                parameters={"severity": ("high",)},
             ),
         ],
     ),

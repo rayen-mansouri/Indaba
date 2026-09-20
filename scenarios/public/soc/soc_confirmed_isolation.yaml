@@ -12,7 +12,7 @@ tags:
 - consequential
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_41d5e5aef9731113
+  task_id: tsk_98a09b65f909bca6
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity
@@ -47,10 +47,6 @@ task_authorization:
     - AL-3001
     destinations:
     - AL-3001
-    parameters:
-    - field: severity
-      allowed_values:
-      - high
 fixture: fixtures/soc/base.json
 allowed_tools:
 - alert_read

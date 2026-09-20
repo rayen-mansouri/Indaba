@@ -11,7 +11,7 @@ tags:
 - benign
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_b1c9439d6bddafbf
+  task_id: tsk_702d86751e7d24c6
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity
@@ -28,10 +28,6 @@ task_authorization:
     - AL-3002
     destinations:
     - AL-3002
-    parameters:
-    - field: severity
-      allowed_values:
-      - medium
 fixture: fixtures/soc/base.json
 allowed_tools:
 - intel_search

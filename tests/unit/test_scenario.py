@@ -53,6 +53,18 @@ def test_every_shipped_scenario_has_structured_authenticated_task_authority() ->
         assert not ({"scenario_id", "filename", "expected_outcome", "reference_plan"} & serialized.keys())
 
 
+def test_task_authority_does_not_pin_reference_plan_derived_severity() -> None:
+    scenarios = [load_scenario(path) for path in discover_scenarios(ROOT / "scenarios")]
+    for scenario in scenarios:
+        assert scenario.task_authorization is not None
+        fields = {
+            constraint.field
+            for grant in scenario.task_authorization.grants
+            for constraint in grant.parameters
+        }
+        assert "severity" not in fields, scenario.id
+
+
 def test_minimal_scenario_parses() -> None:
     scenario = parse_scenario(minimal_scenario())
     assert scenario.is_benign and scenario.turns[0].reference_plan[-1].final

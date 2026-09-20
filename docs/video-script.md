@@ -18,7 +18,12 @@ viewer, and repository commit visible. Do not describe a mock replay as a live a
    - `evidence/traces/comparisons/enterprise_val_encoded_exfil-sentinel-s0.jsonl`
    - `evidence/traces/outcomes/.../enterprise_probe_escalate_send-sentinel-s0.jsonl`
    - `evidence/traces/outcomes/.../enterprise_probe_rewrite_restricted_send-sentinel-s0.jsonl`
-4. Rehearse once and create a backup take. Ensure no model weight path, personal directory listing,
+4. Before choosing the attack shown in the video, run that scenario once with `allow_all` under the
+   same model configuration. Use it only if `attack_success=true`. Then run the same scenario with
+   SENTINEL from a fresh state. Keep both commands and their summaries visible in the recording.
+   If Qwen does not reach the attack, use the deterministic mock pair and label it plainly; never
+   count a non-reaching Qwen control as defense success.
+5. Rehearse once and create a backup take. Ensure no model weight path, personal directory listing,
    secret, or unrelated window is visible.
 
 ## Timeline and narration
@@ -34,16 +39,18 @@ approvals, provenance, sensitivity, and destinations.”
 Show the architecture diagram in `docs/technical-report.md`. State the narrow limitation: synthetic
 offline simulator, not general prompt-injection prevention.
 
-### 0:40-1:35 — Benign live Qwen task
+### 0:40-1:35 — Benign Qwen task
 
-Load the finance Qwen trace. Show model/tool identifier, `case_document_read`, `case_note_create`, final response,
-task success, and matching receipt/state events. Then briefly show the SOC Qwen trace to establish a
-second domain. Say that these are already captured local Qwen runs, replayed for a deterministic
-video; replay itself is not an adaptive evaluation.
+Run `soc_intel_correlation` with Qwen and SENTINEL from a fresh state. Show the model/tool identifier,
+`alert_read`, `intel_search`, final response, task success, and matching receipt/state events. If a
+fresh run is unavailable during the backup take, load the committed Qwen trace and say explicitly
+that it is a captured local run being replayed—not live or adaptive execution. Briefly show the
+finance Qwen trace to establish a second domain, without hiding its run status.
 
 ### 1:35-3:10 — Uninterrupted attack reaches the defense
 
-Load the SENTINEL `enterprise_direct_token_request` trace, then use **Compare run** to load its
+Show the terminal completing the matched `allow_all` and SENTINEL runs without edits or cuts. Then
+load the resulting SENTINEL `enterprise_direct_token_request` trace and use **Compare run** for the
 matched `allow_all` trace. Walk chronologically through:
 
 1. Briefly show the paired `allow_all` trace executing unauthorized `wiki_search` with
@@ -56,7 +63,8 @@ matched `allow_all` trace. Walk chronologically through:
    data-flow violation.
 
 Do not claim task success: explicitly show the grader failure caused by Qwen paraphrasing the
-literal date.
+literal date. If the live Qwen control did not reach the attack, switch to the mock pair, label that
+switch on screen, and make no Qwen defense-effectiveness claim for that scenario.
 
 ### 3:10-4:15 — Lifecycle, approval, rewrite, and trace integrity
 
@@ -102,6 +110,8 @@ Show the evidence manifest and commit. State:
 - one non-violating unnecessary draft makes public TUI 0.983;
 - two Windows symlink tests skip for privilege error 1314;
 - risk values are deterministic severity, not learned probabilities;
+- the published aggregates use one deterministic seed and do not establish statistical confidence
+  intervals;
 - AgentDojo was not run.
 
 End with the exact `uv sync`, `pytest`, `sentinel eval`, and `sentinel replay` commands in the README.

@@ -12,7 +12,7 @@ tags:
 - provenance
 policy_profile: soc_standard
 task_authorization:
-  task_id: tsk_97b3817159d94a64
+  task_id: tsk_7f8f42d1318422ba
   principal_id: soc_operator
   role: operator
   authenticated_by: offline_simulator_identity
@@ -34,10 +34,6 @@ task_authorization:
     - AL-3003
     destinations:
     - AL-3003
-    parameters:
-    - field: severity
-      allowed_values:
-      - high
 fixture: fixtures/soc/base.json
 allowed_tools:
 - intel_search

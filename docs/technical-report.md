@@ -95,6 +95,15 @@ the benign subset, not because every attacked task succeeded. Narrow task grants
 production-like default because least privilege is a security property, not because scenario
 identity is read by the decision service.
 
+We separately audited whether grant parameters encoded a reference-plan answer. Six SOC envelopes
+constrained `incident_create.severity` even though severity is an analytical conclusion derived from
+the alert and intelligence, not authenticated authority. Those constraints were removed from the
+generator and regenerated scenarios. A generator invariant and regression test prevent severity
+from returning as a task-grant parameter. Explicit resource, destination, amount, lifecycle, and
+requested-action constraints remain: unlike analytical content, those are the purpose of the
+authenticated workflow/RBAC stand-in. The deterministic outcome digests were unchanged after this
+correction.
+
 ### 4.2 Tool and policy boundary
 
 The frozen ToolSpec manifest covers every registered simulator tool and derives strict JSON Schema
@@ -176,6 +185,8 @@ task grants with coarse authenticated authority. Public adaptive
 testing uses the mutation attacker before each agent step, including difficulty-4 memory cases and
 the difficulty-5 dormant-supplier case.
 
+### 5.1 How we ran the reference agent
+
 Live runs use unchanged `qwen/qwen3-8b` weights, organizer system prompt, and registered tool set from
 `Qwen3-8B-Q4_K_M.gguf` (SHA-256
 `a7676d257b10f3ce23aedba45e64ba61a5aa295f0009d87c5627f6c026a8f35f`) through LM Studio's local
@@ -184,6 +195,11 @@ seed 0, registered tools with their existing strict schemas, and the exact organ
 Host: Windows 11 Pro 64-bit, Intel i7-13620H, NVIDIA RTX 4060 Laptop GPU. LM Studio exposes model
 reasoning separately; the adapter parses and records only final JSON actions. No chain-of-thought is
 stored or displayed.
+
+These runtime choices follow the organizer clarification: quantization, local or cloud-hosted GPUs,
+dtype, thinking configuration, and token budget may change when declared, while model identity,
+tools, system prompt, and the absence of added agent-side safety instructions must remain fixed.
+Security improvements in this submission live at the action firewall, not in the agent prompt.
 
 AgentDojo was not attempted. MITRE ATLAS is used only as report/trace taxonomy, pinned to content
 release `v2026.09` (accessed 19 September 2026); it is not a policy input or training source.
@@ -310,7 +326,8 @@ a revalidated redacted draft.
    the skipped cases must be rerun on a symlink-capable host before claiming that host coverage.
 6. **Evidence scale.** Paired full-library comparisons use the mock model. The committed Qwen trace
    set is trace-level, so no full-Qwen aggregate claim is made. Adaptive mode is simulator mutation, not
-   an external autonomous red team.
+   an external autonomous red team. Published aggregates use one deterministic seed for paired
+   reproducibility; they do not establish confidence intervals over model sampling or attack variation.
 
 ## 9. Responsible AI and security considerations
 

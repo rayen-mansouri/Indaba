@@ -230,8 +230,8 @@ function detail() {
 
 function vReasons() {
   const run = RUNS[S.sel]; if (!run) return '';
-  const rc = {}, byTool = {};
-  for (const d of allDecisions(run)) {
+  const decisions = allDecisions(run), rc = {}, byTool = {};
+  for (const d of decisions) {
     if (d.decision === 'allow') continue;
     byTool[d.tool || '?'] = (byTool[d.tool || '?'] || 0) + 1;
     for (const c of d.reason_codes || []) rc[c] = (rc[c] || 0) + 1;
@@ -244,8 +244,17 @@ function vReasons() {
       Object.entries(s).map(([k, v]) => `<div class="bar"><div class="n" style="width:330px" title="${esc(k)}">${esc(k.replace(/_/g, ' '))}</div><div class="x" style="text-align:left;color:var(--tx)">${esc(v)}</div></div>`).join('') +
       `<small>${esc(DATA.block_attribution.method || '')}</small></div>`;
   }
+  const intervened = decisions.filter(d => d.legitimate === true && d.decision !== 'allow');
+  const interventionRows = intervened.map(d => `<tr><td>${esc(d.scenario_id)}</td><td>${d.step_id}</td>
+    <td>${esc(d.tool || d.action_type)}</td><td class="d-${d.decision}"><b>${esc(d.decision)}</b></td>
+    <td>${(d.reason_codes || []).map(c => `<span class="tag">${esc(c)}</span>`).join('')}</td>
+    <td>${d.human_approved == null ? '—' : d.human_approved ? 'approved' : 'denied'}</td></tr>`).join('');
   return `<p class="mut">Run: <b>${esc(run.label)}</b> — non-allow decisions only.</p><div class="grid two">
-    <div class="card"><h3>Reason codes</h3>${bars(top(rc), {})}</div><div class="card"><h3>Non-allowed actions by tool</h3>${bars(top(byTool).map(x => ({...x, color: 'var(--vio)'})), {})}</div>${ba}</div>`;
+    <div class="card"><h3>Reason codes</h3>${bars(top(rc), {})}</div><div class="card"><h3>Non-allowed actions by tool</h3>${bars(top(byTool).map(x => ({...x, color: 'var(--vio)'})), {})}</div>${ba}</div>
+    <div class="card scroll" style="margin-top:14px"><h3>Legitimate actions receiving intervention (post-run)</h3>
+    <table><tr><th>scenario</th><th>step</th><th>tool</th><th>decision</th><th>reason codes</th><th>human</th></tr>
+    ${interventionRows || '<tr><td colspan="6"><small>None in this scorecard.</small></td></tr>'}</table>
+    <small>Legitimacy and human outcome are evaluator-only labels. This panel diagnoses false blocks and well-judged escalations after the run; it is never a decision input.</small></div>`;
 }
 
 function vEvidence() {
