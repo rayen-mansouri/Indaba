@@ -13,6 +13,7 @@ is the part being judged. Declare whatever you changed in your technical report.
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -101,6 +102,7 @@ class HFModelAdapter(ModelAdapter):
         device: str = "auto",
         dtype: str = "auto",
         enable_thinking: bool = False,
+        quantize: str | None = None,
     ) -> None:
         try:
             import torch
@@ -108,11 +110,33 @@ class HFModelAdapter(ModelAdapter):
         except ImportError as exc:  # pragma: no cover - depends on optional extra
             raise ModelError("transformers is not installed; run `uv sync --extra hf`") from exc
         resolved_device, resolved_dtype = resolve_runtime(device, dtype, torch.cuda.is_available())
+        quant = (quantize or os.environ.get("SENTINEL_HF_QUANT", "")).lower()
         self._tokenizer: Any = AutoTokenizer.from_pretrained(model_path, local_files_only=local_files_only)
-        model: Any = AutoModelForCausalLM.from_pretrained(
-            model_path, local_files_only=local_files_only, dtype=resolved_dtype
-        )
-        self._model: Any = model.to(resolved_device)
+        if quant in ("4bit", "8bit"):
+            # Memory-constrained runtime (e.g. a 16 GB Colab T4). Same weights, quantized on load;
+            # declare this in the technical report as a runtime change, not an agent change.
+            if not resolved_device.startswith("cuda"):
+                raise ModelError("4/8-bit loading needs a CUDA GPU")
+            from transformers import BitsAndBytesConfig
+
+            bnb = BitsAndBytesConfig(
+                load_in_4bit=quant == "4bit",
+                load_in_8bit=quant == "8bit",
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+            )
+            self._model: Any = AutoModelForCausalLM.from_pretrained(
+                model_path,
+                local_files_only=local_files_only,
+                quantization_config=bnb,
+                device_map={"": 0},
+                dtype=torch.float16,
+            )
+        else:
+            model: Any = AutoModelForCausalLM.from_pretrained(
+                model_path, local_files_only=local_files_only, dtype=resolved_dtype
+            )
+            self._model = model.to(resolved_device)
         self._max_new_tokens = max_new_tokens
         self._max_context_chars = max_context_chars
         self._enable_thinking = enable_thinking

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SENTINEL Dashboard</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121823;--p2:#182131;--line:#243044;--tx:#e6edf6;--mut:#8b9bb4;--ok:#3ddc97;--bad:#ff5d73;--warn:#ffb84d;--acc:#5ab0ff;--vio:#b48cff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#0b0f14ee;backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;letter-spacing:.5px}
+header h1 span{color:var(--acc)}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+button,select,.btn{background:var(--p2);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--acc)}
+button.on{background:var(--acc);color:#04121f;border-color:var(--acc);font-weight:600}
+.sp{flex:1}
+main{padding:20px;max-width:1400px;margin:0 auto}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);font-weight:600}
+.kpi .v{font-size:26px;font-weight:700}
+.kpi .l{color:var(--mut);font-size:12px}
+.good{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mut{color:var(--mut)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:12px;white-space:nowrap}
+td.c,th.c{text-align:center}
+.scroll{overflow-x:auto}
+.bar{display:flex;align-items:center;gap:8px;margin:4px 0}
+.bar .n{width:190px;flex:none;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .t{flex:1;background:var(--p2);border-radius:4px;height:16px;position:relative;overflow:hidden}
+.bar .f{height:100%;border-radius:4px}
+.bar .x{width:70px;text-align:right;font-size:12px;color:var(--mut);flex:none}
+.stack{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--p2)}
+.stack div{height:100%}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;margin:1px 2px 1px 0;background:var(--p2);border:1px solid var(--line)}
+.d-allow{color:var(--ok)}.d-block{color:var(--bad)}.d-escalate{color:var(--warn)}.d-rewrite{color:var(--vio)}
+.cell{cursor:pointer;text-align:center;font-weight:700;border-radius:4px}
+.cell.ok{background:#3ddc9722;color:var(--ok)}.cell.breach{background:#ff5d7333;color:var(--bad)}.cell.util{background:#ffb84d22;color:var(--warn)}.cell.none{color:var(--line)}
+.cell.sel{outline:2px solid var(--acc)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:10px 16px;color:var(--mut);cursor:pointer}
+.drop.over{border-color:var(--acc);color:var(--tx)}
+.lens{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.lens div{background:var(--p2);border-radius:8px;padding:10px}
+.lens b{display:block;margin-bottom:4px}
+a{color:var(--acc)}
+small{color:var(--mut)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>SENTINEL</span> Dashboard</h1>
+  <nav id="nav"></nav>
+  <div class="sp"></div>
+  <select id="runsel" title="Scorecard"></select>
+  <label class="btn">+ Load scorecards / summaries<input id="file" type="file" accept=".json" multiple hidden></label>
+  <a class="btn" href="sentinel-trace-viewer.html" style="text-decoration:none">Trace viewer &rarr;</a>
+</header>
+<main id="view"></main>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = v => v == null ? 'n/a' : (v * 100).toFixed(1) + '%';
+const num = (v, d = 3) => v == null ? 'n/a' : Number(v).toFixed(d);
+const DCOL = {allow:'var(--ok)', block:'var(--bad)', escalate:'var(--warn)', rewrite:'var(--vio)'};
+
+// key, short, long, direction (1 higher better, -1 lower better), kind
+const METRICS = [
+  ['btu','BTU','Benign Task Utility',1,'pct'], ['asr','ASR','Attack Success Rate',-1,'pct'],
+  ['cvr','CVR','Critical Violation Rate',-1,'pct'], ['fbr','FBR','False Block Rate',-1,'pct'],
+  ['uer','UER','Unnecessary Escalation Rate',-1,'pct'], ['tui','TUI','Tool-Use Integrity',1,'pct'],
+  ['dfi','DFI','Data-Flow Integrity',1,'pct'], ['escalation_precision','EscPrec','Escalation precision',1,'pct'],
+  ['brier','Brier','Brier score',-1,'n'], ['ece','ECE','Calibration error (ECE)',-1,'n'],
+  ['latency_median_ms','p50 ms','Median latency',-1,'ms'], ['latency_p95_ms','p95 ms','p95 latency',-1,'ms'],
+  ['defense_errors','Errors','Defense errors',-1,'int']
+];
+const fmt = (v, kind) => v == null ? 'n/a' : kind === 'pct' ? pct(v) : kind === 'ms' ? Number(v).toFixed(1) : kind === 'int' ? String(v) : num(v);
+function tone(v, dir, kind) {
+  if (v == null || kind !== 'pct') return '';
+  const s = dir === 1 ? v : 1 - v;
+  return s >= 0.95 ? 'good' : s >= 0.8 ? 'warn' : 'bad';
+}
+
+/* ---------- normalize scorecards ---------- */
+function norm(sc, label) {
+  return {
+    label, split: sc.split || '?', defense: sc.defense || '?', attack_mode: sc.attack_mode || 'static',
+    ablation: sc.ablation || null, digest: sc.deterministic_digest || '', metrics: sc.metrics || {},
+    by_domain: sc.by_domain || {}, score: sc.score || null, outcomes: sc.outcomes || []
+  };
+}
+const RUNS = (DATA.runs || []).map(r => norm(r.data, r.label));
+const QWEN = (DATA.qwen || []).slice();
+const S = {sel: Math.max(0, RUNS.findIndex(r => r.label === 'public-sentinel')), tab: 'overview', split: 'public', metric: 'asr', detail: null};
+
+/* ---------- helpers ---------- */
+function bars(items, opts = {}) {
+  const max = opts.max ?? Math.max(1e-9, ...items.map(i => i.value));
+  return items.map(i => `<div class="bar"><div class="n" title="${esc(i.label)}">${esc(i.label)}</div>
+    <div class="t"><div class="f" style="width:${Math.min(100, (i.value / max) * 100)}%;background:${i.color || 'var(--acc)'}"></div></div>
+    <div class="x">${esc(i.text ?? i.value)}</div></div>`).join('') || '<small>no data</small>';
+}
+function allDecisions(run) {
+  const out = [];
+  for (const o of run.outcomes) for (const d of (o.decisions || [])) out.push({...d, scenario_id: o.scenario_id, attack_present: o.attack_present});
+  return out;
+}
+function status(o) {
+  if (!o) return 'none';
+  if (o.attack_present && o.attack_success) return 'breach';
+  if (!o.task_success) return 'util';
+  return 'ok';
+}
+const STAT = {ok: '✓', breach: '✗ breach', util: 'task ✗', none: '·'};
+
+/* ---------- views ---------- */
+function vOverview() {
+  const run = RUNS[S.sel];
+  if (!run) return '<div class="card">No scorecards loaded. Use “Load scorecards”.</div>';
+  const m = run.metrics, decs = allDecisions(run);
+  const kp = METRICS.map(([k, s, l, dir, kind]) =>
+    `<div class="card kpi" title="${esc(l)}"><div class="v ${tone(m[k], dir, kind)}">${fmt(m[k], kind)}</div><div class="l">${s} · ${esc(l)}</div></div>`).join('');
+
+  const withAll = decs.filter(d => d.risk_score != null && d.confidence != null && (d.reason_codes || []).length);
+  const legib = decs.length ? withAll.length / decs.length : null;
+  const benign = run.outcomes.filter(o => !o.attack_present), attacks = run.outcomes.filter(o => o.attack_present);
+  const legitBlocked = decs.filter(d => d.legitimate && d.decision !== 'allow').length;
+  const lens = `<div class="lens">
+    <div><b>Robustness <small>attack reaches defense &amp; fails</small></b>ASR <span class="${tone(m.asr,-1,'pct')}">${pct(m.asr)}</span> · CVR ${pct(m.cvr)}<br><small>${attacks.filter(o=>!o.attack_success).length}/${attacks.length} attacked scenarios held</small></div>
+    <div><b>Legibility <small>score, confidence, reasons</small></b>${pct(legib)} of decisions carry risk + confidence + reason code<br><small>${decs.length} decisions</small></div>
+    <div><b>Utility <small>benign task completes</small></b>BTU <span class="${tone(m.btu,1,'pct')}">${pct(m.btu)}</span><br><small>${benign.filter(o=>o.task_success).length}/${benign.length} benign scenarios succeeded</small></div>
+    <div><b>Precision <small>no needless blocks</small></b>FBR ${pct(m.fbr)} · UER ${pct(m.uer)}<br><small>${legitBlocked} legitimate actions not allowed</small></div></div>`;
+
+  const dom = Object.entries(run.by_domain).map(([d, x]) => `<tr><td>${esc(d)}</td><td class="c">${x.scenario_count}</td>` +
+    ['btu','asr','cvr','fbr','tui'].map(k => `<td class="c ${tone(x[k], METRICS.find(z=>z[0]===k)[3], 'pct')}">${pct(x[k])}</td>`).join('') +
+    `<td class="c">${fmt(x.latency_p95_ms,'ms')}</td></tr>`).join('');
+
+  const fam = {};
+  for (const o of attacks) { const f = o.attack_family || 'unknown'; (fam[f] ||= {n: 0, s: 0}); fam[f].n++; if (o.attack_success) fam[f].s++; }
+  const famBars = bars(Object.entries(fam).map(([f, x]) => ({label: `${f} (${x.n})`, value: x.s / x.n, color: x.s ? 'var(--bad)' : 'var(--ok)', text: `ASR ${pct(x.s / x.n)}`})), {max: 1});
+
+  const cnt = {}; for (const d of decs) { const k = d.decision || '?'; cnt[k] = (cnt[k] || 0) + 1; }
+  const tot = decs.length || 1;
+  const stack = `<div class="stack">${Object.entries(cnt).map(([k, v]) => `<div title="${k}: ${v}" style="width:${v / tot * 100}%;background:${DCOL[k] || 'var(--mut)'}"></div>`).join('')}</div>
+    <div style="margin-top:6px">${Object.entries(cnt).map(([k, v]) => `<span class="tag"><b class="d-${k}">${k}</b> ${v}</span>`).join('')}</div>`;
+  const illeg = decs.filter(d => d.legitimate === false), leg = decs.filter(d => d.legitimate);
+  const split2 = `<small>Illegitimate actions: ${illeg.length} (${illeg.filter(d=>d.decision==='allow').length} allowed) · Legitimate: ${leg.length} (${leg.filter(d=>d.decision!=='allow').length} not allowed)</small>`;
+
+  return `<div class="grid kpis">${kp}</div>
+  <div class="card" style="margin-top:14px"><h3>Jury rubric lens (docs/scoring.md → Video &amp; observability)</h3>${lens}</div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>By domain</h3><div class="scroll"><table><tr><th>domain</th><th class="c">n</th><th class="c">BTU</th><th class="c">ASR</th><th class="c">CVR</th><th class="c">FBR</th><th class="c">TUI</th><th class="c">p95 ms</th></tr>${dom}</table></div></div>
+    <div class="card"><h3>Attack-family outcome</h3>${famBars}</div>
+    <div class="card"><h3>Decision mix</h3>${stack}<div style="margin-top:8px">${split2}</div></div>
+    <div class="card"><h3>Calibration (risk vs. observed illegitimacy)</h3>${reliability(decs)}<small>Dots on the diagonal = well calibrated. Dot size = #decisions.</small></div>
+  </div>`;
+}
+function reliability(decs) {
+  const b = Array.from({length: 10}, () => ({n: 0, il: 0, r: 0}));
+  for (const d of decs) {
+    if (d.risk_score == null || d.defense_error || d.legitimate == null) continue;
+    const i = Math.min(9, Math.floor(d.risk_score * 10)); b[i].n++; b[i].r += d.risk_score; if (!d.legitimate) b[i].il++;
+  }
+  const W = 300, H = 260, p = 34, sx = v => p + v * (W - p - 10), sy = v => H - p - v * (H - p - 10);
+  const pts = b.filter(x => x.n).map(x => `<circle cx="${sx(x.r / x.n)}" cy="${sy(x.il / x.n)}" r="${Math.min(14, 3 + Math.sqrt(x.n))}" fill="var(--acc)" fill-opacity=".7"><title>n=${x.n}, mean risk ${(x.r/x.n).toFixed(2)}, illegitimate ${(x.il/x.n*100).toFixed(0)}%</title></circle>`).join('');
+  const ticks = [0, .5, 1].map(t => `<text x="${sx(t)}" y="${H-p+16}" fill="#8b9bb4" font-size="10" text-anchor="middle">${t}</text><text x="${p-6}" y="${sy(t)+3}" fill="#8b9bb4" font-size="10" text-anchor="end">${t}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:340px"><rect x="${p}" y="10" width="${W-p-10}" height="${H-p-10}" fill="none" stroke="#243044"/>
+    <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1)}" y2="${sy(1)}" stroke="#8b9bb4" stroke-dasharray="4 4"/>${pts}${ticks}
+    <text x="${W/2}" y="${H-4}" fill="#8b9bb4" font-size="10" text-anchor="middle">mean risk score</text>
+    <text transform="translate(9 ${H/2}) rotate(-90)" fill="#8b9bb4" font-size="10" text-anchor="middle">fraction illegitimate</text></svg>`;
+}
+
+function vCompare() {
+  const runs = RUNS.map((r, i) => ({r, i})).filter(x => x.r.split === S.split);
+  const mm = METRICS.find(x => x[0] === S.metric);
+  const head = METRICS.map(x => `<th class="c" title="${esc(x[2])}">${x[1]}</th>`).join('');
+  const rows = runs.map(({r, i}) => `<tr><td><a href="#" data-sel="${i}">${esc(r.label)}</a><br><small>${esc(r.defense)} · ${esc(r.attack_mode)}${r.ablation ? ' · ' + esc(r.ablation) : ''}</small></td>` +
+    METRICS.map(([k, s, l, dir, kind]) => `<td class="c ${tone(r.metrics[k], dir, kind)}">${fmt(r.metrics[k], kind)}</td>`).join('') + '</tr>').join('');
+  const chart = bars(runs.map(({r}) => ({label: r.label, value: r.metrics[S.metric] ?? 0, text: fmt(r.metrics[S.metric], mm[4]),
+    color: tone(r.metrics[S.metric], mm[3], mm[4]) === 'bad' ? 'var(--bad)' : tone(r.metrics[S.metric], mm[3], mm[4]) === 'warn' ? 'var(--warn)' : 'var(--ok)'})), {max: mm[4] === 'pct' ? 1 : undefined});
+  return `<div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+    ${['public','validation'].map(s => `<button data-split="${s}" class="${S.split===s?'on':''}">${s}</button>`).join('')}
+    <span class="mut">metric</span><select id="msel">${METRICS.map(x => `<option value="${x[0]}" ${x[0]===S.metric?'selected':''}>${x[1]} — ${x[2]}</option>`).join('')}</select></div>
+  <div class="grid two"><div class="card"><h3>${esc(mm[2])} by defense / ablation</h3>${chart}</div>
+  <div class="card"><h3>Reading the ablations</h3><small>Baselines (allow_all, heuristic_risk, provenance) vs. SENTINEL and its ablations (<code>no_task_g7</code>, <code>whole_context</code>, authority ablation, adaptive mutation). Lower is better for ASR/CVR/FBR/UER/Brier/ECE; higher for BTU/TUI/DFI. Green ≥95% good, amber ≥80%, red otherwise (rate metrics only).</small></div></div>
+  <div class="card scroll" style="margin-top:14px"><h3>All metrics</h3><table><tr><th>run</th>${head}</tr>${rows || '<tr><td>No runs for this split</td></tr>'}</table></div>`;
+}
+
+function vScenarios() {
+  const runs = RUNS.map((r, i) => ({r, i})).filter(x => x.r.split === S.split);
+  const ids = [...new Set(runs.flatMap(x => x.r.outcomes.map(o => o.scenario_id)))].sort();
+  const dom = id => (runs.flatMap(x => x.r.outcomes).find(o => o.scenario_id === id) || {}).domain || '';
+  const head = runs.map(x => `<th class="c" style="font-size:10px;max-width:90px;white-space:normal">${esc(x.r.label.replace(/^(public|validation)-/, ''))}</th>`).join('');
+  const rows = ids.map(id => `<tr><td>${esc(id)}<br><small>${esc(dom(id))}</small></td>` + runs.map(({r, i}) => {
+    const o = r.outcomes.find(o => o.scenario_id === id), st = status(o);
+    const sel = S.detail && S.detail.i === i && S.detail.id === id ? ' sel' : '';
+    return `<td class="cell ${st}${sel}" data-run="${i}" data-id="${esc(id)}" title="${o ? (o.attack_present ? 'attack: ' + o.attack_family : 'benign') : 'not run'}">${STAT[st]}</td>`;
+  }).join('') + '</tr>').join('');
+  return `<div style="display:flex;gap:8px;margin-bottom:12px">${['public','validation'].map(s => `<button data-split="${s}" class="${S.split===s?'on':''}">${s}</button>`).join('')}
+    <span class="mut" style="align-self:center">✓ safe &amp; useful · ✗ breach (attack succeeded) · task ✗ (safe but task failed)</span></div>
+  <div class="card scroll"><h3>Scenario × defense matrix — click a cell</h3><table><tr><th>scenario</th>${head}</tr>${rows}</table></div>
+  <div id="detail" style="margin-top:14px">${detail()}</div>`;
+}
+function detail() {
+  if (!S.detail) return '<div class="card"><small>Select a cell to inspect the decision timeline.</small></div>';
+  const r = RUNS[S.detail.i], o = r.outcomes.find(o => o.scenario_id === S.detail.id);
+  if (!o) return '';
+  const rows = (o.decisions || []).map(d => `<tr><td>${d.step_id}</td><td>${esc(d.tool || d.action_type)}</td><td class="d-${d.decision}"><b>${d.decision}</b>${d.human_approved != null ? ' (human: ' + (d.human_approved ? 'approved' : 'denied') + ')' : ''}</td>
+    <td>${num(d.risk_score, 2)}</td><td>${num(d.confidence, 2)}</td><td>${(d.reason_codes || []).map(c => `<span class="tag">${esc(c)}</span>`).join('')}</td>
+    <td>${d.legitimate == null ? '' : d.legitimate ? 'legit' : '<span class="bad">illegit</span>'}${d.consequential ? ' · consequential' : ''}</td><td>${d.latency_ms == null ? '' : Number(d.latency_ms).toFixed(1)}</td></tr>`).join('');
+  const gr = (o.grader_results || []).map(g => `<div>${g.passed ? '<span class="good">✓</span>' : '<span class="bad">✗</span>'} <small>${esc(g.condition)}${g.detail ? ' — ' + esc(g.detail) : ''}</small></div>`).join('');
+  const fi = (o.findings || []).map(f => `<div class="bad"><small>${esc(typeof f === 'string' ? f : JSON.stringify(f))}</small></div>`).join('');
+  return `<div class="card"><h3>${esc(o.scenario_id)} · ${esc(r.label)}</h3>
+    <p>${o.attack_present ? `Attack family <b>${esc(o.attack_family)}</b>` : 'Benign'} · task success <b class="${o.task_success ? 'good' : 'bad'}">${o.task_success}</b> · attack success <b class="${o.attack_success ? 'bad' : 'good'}">${o.attack_success}</b> · steps ${o.steps} · ${esc(o.termination)}</p>
+    <div class="scroll"><table><tr><th>step</th><th>tool</th><th>decision</th><th>risk</th><th>conf</th><th>reason codes</th><th>label</th><th>ms</th></tr>${rows}</table></div>
+    ${gr ? `<h3 style="margin-top:12px">Success conditions</h3>${gr}` : ''}${fi ? `<h3 style="margin-top:12px">Policy findings</h3>${fi}` : ''}</div>`;
+}
+
+function vReasons() {
+  const run = RUNS[S.sel]; if (!run) return '';
+  const rc = {}, byTool = {};
+  for (const d of allDecisions(run)) {
+    if (d.decision === 'allow') continue;
+    byTool[d.tool || '?'] = (byTool[d.tool || '?'] || 0) + 1;
+    for (const c of d.reason_codes || []) rc[c] = (rc[c] || 0) + 1;
+  }
+  const top = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({label: k, value: v, text: v}));
+  let ba = '';
+  if (DATA.block_attribution) {
+    const s = DATA.block_attribution.summary || {};
+    ba = `<div class="card"><h3>Block attribution (public + validation, post-run)</h3>` +
+      Object.entries(s).map(([k, v]) => `<div class="bar"><div class="n" style="width:330px" title="${esc(k)}">${esc(k.replace(/_/g, ' '))}</div><div class="x" style="text-align:left;color:var(--tx)">${esc(v)}</div></div>`).join('') +
+      `<small>${esc(DATA.block_attribution.method || '')}</small></div>`;
+  }
+  return `<p class="mut">Run: <b>${esc(run.label)}</b> — non-allow decisions only.</p><div class="grid two">
+    <div class="card"><h3>Reason codes</h3>${bars(top(rc), {})}</div><div class="card"><h3>Non-allowed actions by tool</h3>${bars(top(byTool).map(x => ({...x, color: 'var(--vio)'})), {})}</div>${ba}</div>`;
+}
+
+function vEvidence() {
+  const live = DATA.manifest && DATA.manifest.live_model, pair = DATA.manifest && DATA.manifest.qwen_paired_control;
+  const rows = QWEN.map(q => `<tr><td>${esc(q.group)}</td><td>${esc(q.scenario_id)}</td><td>${esc(q.defense)}</td><td>${q.attack_present ? esc(q.attack_family) : 'benign'}</td>
+    <td class="${q.task_success ? 'good' : 'bad'}">${q.task_success}</td><td class="${q.attack_success ? 'bad' : 'good'}">${q.attack_success}</td>
+    <td>${(q.decisions || []).map(d => `<span class="tag"><b class="d-${d.decision}">${d.decision}</b> ${esc(d.tool || d.action_type)}</span>`).join('')}</td></tr>`).join('');
+  return `<div class="grid two">
+    <div class="card"><h3>Live model</h3>${live ? Object.entries(live).map(([k, v]) => `<div><small>${esc(k)}</small>: ${esc(v)}</div>`).join('') : '<small>n/a</small>'}</div>
+    <div class="card"><h3>Paired control (non-vacuous attack)</h3>${pair ? `<div>${esc(pair.scenario)}</div>
+      <div>allow_all → attack success <b class="${pair.allow_all_attack_success ? 'bad' : 'good'}">${pair.allow_all_attack_success}</b></div>
+      <div>sentinel → attack success <b class="${pair.sentinel_attack_success ? 'bad' : 'good'}">${pair.sentinel_attack_success}</b>, task success <b class="${pair.sentinel_task_success ? 'good' : 'bad'}">${pair.sentinel_task_success}</b></div>
+      <small>${esc(pair.interpretation)}</small>` : '<small>n/a</small>'}</div></div>
+  <div class="card scroll" style="margin-top:14px"><h3>Real-model (Qwen3-8B) run summaries</h3><table><tr><th>group</th><th>scenario</th><th>defense</th><th>attack</th><th>task ok</th><th>attack ok</th><th>decisions</th></tr>${rows || '<tr><td>none loaded</td></tr>'}</table>
+  <small>Drop <code>*.summary.json</code> files from new Colab runs via “Load scorecards / summaries”. Full JSONL traces open in the trace viewer.</small></div>`;
+}
+
+/* ---------- shell ---------- */
+const TABS = [['overview','Overview'],['compare','Compare & ablations'],['scenarios','Scenarios'],['reasons','Reasons & blocks'],['evidence','Real-model evidence']];
+const VIEWS = {overview: vOverview, compare: vCompare, scenarios: vScenarios, reasons: vReasons, evidence: vEvidence};
+function render() {
+  $('#nav').innerHTML = TABS.map(([k, l]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}">${l}</button>`).join('');
+  $('#runsel').innerHTML = RUNS.map((r, i) => `<option value="${i}" ${i === S.sel ? 'selected' : ''}>${esc(r.label)}</option>`).join('');
+  $('#view').innerHTML = VIEWS[S.tab]();
+  $('#runsel').style.display = ['overview', 'reasons'].includes(S.tab) ? '' : 'none';
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab],[data-split],[data-run],[data-sel]'); if (!t) return;
+  if (t.dataset.tab) S.tab = t.dataset.tab;
+  else if (t.dataset.split) S.split = t.dataset.split;
+  else if (t.dataset.run !== undefined) S.detail = {i: +t.dataset.run, id: t.dataset.id};
+  else if (t.dataset.sel !== undefined) { e.preventDefault(); S.sel = +t.dataset.sel; S.tab = 'overview'; }
+  render();
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'runsel') { S.sel = +e.target.value; render(); }
+  if (e.target.id === 'msel') { S.metric = e.target.value; render(); }
+});
+async function loadFiles(files) {
+  for (const f of files) {
+    try {
+      const d = JSON.parse(await f.text()), label = f.name.replace(/\.json$/, '');
+      if (d && d.outcomes && d.metrics) { RUNS.push(norm(d, label)); S.sel = RUNS.length - 1; S.split = d.split || S.split; S.tab = 'overview'; }
+      else if (d && d.scenario_id && Array.isArray(d.decisions)) QWEN.push({...d, group: 'loaded'});
+      else alert(f.name + ': not a scorecard or run summary');
+    } catch (err) { alert(f.name + ': ' + err.message); }
+  }
+  render();
+}
+$('#file').addEventListener('change', e => loadFiles(e.target.files));
+addEventListener('dragover', e => e.preventDefault());
+addEventListener('drop', e => { e.preventDefault(); loadFiles(e.dataTransfer.files); });
+render();
+</script>
+</body>
+</html>

@@ -107,7 +107,14 @@ def _model_factory(model: str) -> Callable[[], Any]:
     from sentinel.models.hf_adapter import DEFAULT_MODEL, HFModelAdapter
 
     path = DEFAULT_MODEL if model in ("qwen3-8b", "qwen3", "qwen", "default") else model
-    return lambda: HFModelAdapter(path)
+    cache: list[Any] = []  # load the 8B weights once per process, not once per scenario
+
+    def factory() -> Any:
+        if not cache:
+            cache.append(HFModelAdapter(path))
+        return cache[0]
+
+    return factory
 
 
 # ---- scenarios ---------------------------------------------------------------------------------
