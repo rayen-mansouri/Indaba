@@ -163,7 +163,13 @@ def _decompressed_tokens(text: str, decoder: str) -> str:
 
 @lru_cache(maxsize=512)
 def transformed_text_variants(text: str) -> tuple[tuple[Transformation, str], ...]:
-    """Bounded deterministic variants used for provenance and outbound value DLP."""
+    """Bounded deterministic variants used for provenance and outbound value DLP.
+
+    Pure function of ``text`` — memoized because normalize() calls this once per
+    (candidate field x observed-content item) pair, and the same observed content is
+    checked repeatedly across a multi-turn scenario. Capped maxsize keeps this a speed
+    win without turning into an unbounded memory grower over a long eval run.
+    """
     text = text[:MAX_SCAN_CHARS]
     return (
         (Transformation.DIRECT, text),

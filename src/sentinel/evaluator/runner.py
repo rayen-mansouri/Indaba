@@ -282,99 +282,116 @@ def run_scenario(
     )
     log = EventLog(run_id, clock, sink_path=artifact)
     try:
-        registry = registry_for_domain(scenario.domain.value)
-        gateway = ToolGateway(registry, state)
-        loaded_policy = load_policy(config.root, scenario.policy_profile)
-        policy = PolicyEngine(loaded_policy, scenario)
-        if isinstance(defense, SentinelFirewallDefense):
-            defense.bind_run(
-                run_id=run_id,
-                task_authorization=scenario.task_authorization,
-                policy=loaded_policy,
-                allowed_tools=tuple(scenario.allowed_tools),
-                registry=registry,
-                state=state,
-                gateway=gateway,
-                log=log,
-            )
-        hooks = EvaluationHooks(
-            scenario, state, log, policy, attacker, config.attack_mode, competition.attack_simulation.query_budget
+        return _run_scenario_body(
+            scenario, defense, config, attacker, run_id, state, clock, artifact, log, competition
         )
-        hooks.bind_registry(gateway)
-        policy_context: dict[str, Any] = policy.defense_context(registry.as_dict())
-        internal_domain = state.settings.get("internal_email_domain")
-        if internal_domain:
-            policy_context["internal_email_domains"] = [internal_domain]
-        agent = ReferenceAgent(
-            scenario=scenario,
-            state=state,
-            gateway=gateway,
-            model=config.model_factory(),
-            defense=defense,
-            hooks=hooks,
-            log=log,
-            clock=clock,
-            policy_context=policy_context,
-            runtime=competition.defense,
-            include_reference_plan=config.include_reference_plan,
-        )
-        agent_result = agent.run()
-        if isinstance(defense, SentinelFirewallDefense):
-            from sentinel.firewall.trace import TraceIntegrityError, verify_digest_linked_trace
-
-            try:
-                verify_digest_linked_trace(log.events)
-            except TraceIntegrityError as exc:
-                agent_result.termination = f"security_error: trace_integrity: {exc}"[:200]
-                log.append(
-                    EventType.POLICY_VIOLATION,
-                    Actor.EVALUATOR,
-                    agent_result.steps,
-                    {"rule_id": "TRACE_INTEGRITY", "message": str(exc)},
-                )
-
-        graders = grade_task(
-            list(scenario.success_conditions), GradingContext(state=state, responses=agent_result.responses)
-        )
-        task_success = all(g.passed for g in graders) and agent_result.termination == "completed"
-        verdict = security_verdict(scenario, hooks.findings)
-        passed = sum(g.passed for g in graders)
-        log.append(
-            EventType.TASK_SUCCESS if task_success else EventType.TASK_FAILURE,
-            Actor.EVALUATOR,
-            agent_result.steps,
-            {"summary": f"{passed}/{len(graders)} success conditions passed", "termination": agent_result.termination},
-        )
-
-        outcome = ScenarioOutcome(
-            run_id=run_id,
-            scenario_id=scenario.id,
-            scenario_version=scenario.version,
-            domain=scenario.domain.value,
-            split=scenario.split.value,
-            seed=scenario.seed,
-            defense=defense.name,
-            attack_present=scenario.attack.present,
-            attack_family=scenario.attack.family.value,
-            hard_negative=scenario.is_hard_negative,
-            difficulty=scenario.attack.difficulty,
-            steps=agent_result.steps,
-            task_success=task_success,
-            attack_success=verdict.attack_success,
-            critical_violation=verdict.critical_violation,
-            data_flow_violation=verdict.data_flow_violation,
-            grader_results=graders,
-            findings=[f.to_payload() for f in hooks.findings],
-            decisions=[hooks.decisions[k] for k in sorted(hooks.decisions)],
-            tool_executions=hooks.executions,
-            mutations=hooks.mutations,
-            termination=agent_result.termination,
-        )
-        if config.artifacts is not None:
-            config.artifacts.write_json(config.artifact_group, f"{run_id}.summary", outcome.model_dump(mode="json"))
-        return ScenarioRun(outcome=outcome, log=log, agent_result=agent_result, artifact=artifact)
     finally:
         log.close()
+
+
+def _run_scenario_body(
+    scenario: Scenario,
+    defense: Defense,
+    config: RunConfig,
+    attacker: Attacker | None,
+    run_id: str,
+    state: WorldState,
+    clock: LogicalClock,
+    artifact: Path | None,
+    log: EventLog,
+    competition: CompetitionConfig,
+) -> ScenarioRun:
+    registry = registry_for_domain(scenario.domain.value)
+    gateway = ToolGateway(registry, state)
+    loaded_policy = load_policy(config.root, scenario.policy_profile)
+    policy = PolicyEngine(loaded_policy, scenario)
+    if isinstance(defense, SentinelFirewallDefense):
+        defense.bind_run(
+            run_id=run_id,
+            task_authorization=scenario.task_authorization,
+            policy=loaded_policy,
+            allowed_tools=tuple(scenario.allowed_tools),
+            registry=registry,
+            state=state,
+            gateway=gateway,
+            log=log,
+        )
+    hooks = EvaluationHooks(
+        scenario, state, log, policy, attacker, config.attack_mode, competition.attack_simulation.query_budget
+    )
+    hooks.bind_registry(gateway)
+    policy_context: dict[str, Any] = policy.defense_context(registry.as_dict())
+    internal_domain = state.settings.get("internal_email_domain")
+    if internal_domain:
+        policy_context["internal_email_domains"] = [internal_domain]
+    agent = ReferenceAgent(
+        scenario=scenario,
+        state=state,
+        gateway=gateway,
+        model=config.model_factory(),
+        defense=defense,
+        hooks=hooks,
+        log=log,
+        clock=clock,
+        policy_context=policy_context,
+        runtime=competition.defense,
+        include_reference_plan=config.include_reference_plan,
+    )
+    agent_result = agent.run()
+    if isinstance(defense, SentinelFirewallDefense):
+        from sentinel.firewall.trace import TraceIntegrityError, verify_digest_linked_trace
+
+        try:
+            verify_digest_linked_trace(log.events)
+        except TraceIntegrityError as exc:
+            agent_result.termination = f"security_error: trace_integrity: {exc}"[:200]
+            log.append(
+                EventType.POLICY_VIOLATION,
+                Actor.EVALUATOR,
+                agent_result.steps,
+                {"rule_id": "TRACE_INTEGRITY", "message": str(exc)},
+            )
+
+    graders = grade_task(
+        list(scenario.success_conditions), GradingContext(state=state, responses=agent_result.responses)
+    )
+    task_success = all(g.passed for g in graders) and agent_result.termination == "completed"
+    verdict = security_verdict(scenario, hooks.findings)
+    passed = sum(g.passed for g in graders)
+    log.append(
+        EventType.TASK_SUCCESS if task_success else EventType.TASK_FAILURE,
+        Actor.EVALUATOR,
+        agent_result.steps,
+        {"summary": f"{passed}/{len(graders)} success conditions passed", "termination": agent_result.termination},
+    )
+
+    outcome = ScenarioOutcome(
+        run_id=run_id,
+        scenario_id=scenario.id,
+        scenario_version=scenario.version,
+        domain=scenario.domain.value,
+        split=scenario.split.value,
+        seed=scenario.seed,
+        defense=defense.name,
+        attack_present=scenario.attack.present,
+        attack_family=scenario.attack.family.value,
+        hard_negative=scenario.is_hard_negative,
+        difficulty=scenario.attack.difficulty,
+        steps=agent_result.steps,
+        task_success=task_success,
+        attack_success=verdict.attack_success,
+        critical_violation=verdict.critical_violation,
+        data_flow_violation=verdict.data_flow_violation,
+        grader_results=graders,
+        findings=[f.to_payload() for f in hooks.findings],
+        decisions=[hooks.decisions[k] for k in sorted(hooks.decisions)],
+        tool_executions=hooks.executions,
+        mutations=hooks.mutations,
+        termination=agent_result.termination,
+    )
+    if config.artifacts is not None:
+        config.artifacts.write_json(config.artifact_group, f"{run_id}.summary", outcome.model_dump(mode="json"))
+    return ScenarioRun(outcome=outcome, log=log, agent_result=agent_result, artifact=artifact)
 
 
 # ---- suites -----------------------------------------------------------------------------------

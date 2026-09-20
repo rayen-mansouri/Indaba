@@ -78,10 +78,13 @@ class EventLog:
         self._clock = clock
         self._events: list[Event] = []
         self._sink_path = sink_path
-        self._sink_handle = None
+        self._sink_handle: Any = None
         if sink_path is not None:
             sink_path.parent.mkdir(parents=True, exist_ok=True)
-            self._sink_handle = sink_path.open("a", encoding="utf-8", newline="\n")
+            # "x" mode: fails if the artifact already exists, same guarantee as the previous
+            # touch(exist_ok=False), and gives us one handle held open for the run's lifetime
+            # instead of reopening the file on every append().
+            self._sink_handle = sink_path.open("x", encoding="utf-8", newline="\n")
 
     def append(
         self,
@@ -108,11 +111,15 @@ class EventLog:
         )
         self._events.append(event)
         if self._sink_handle is not None:
+            # flush() (no reopen) still makes the event visible immediately for the offline
+            # viewer's live-follow mode; the handle itself is held open for the run's lifetime
+            # and closed via close() by the caller.
             self._sink_handle.write(event_to_json(event) + "\n")
             self._sink_handle.flush()
         return event
 
     def close(self) -> None:
+        """Close the sink handle, if one is open. Safe to call more than once."""
         if self._sink_handle is not None:
             self._sink_handle.close()
             self._sink_handle = None

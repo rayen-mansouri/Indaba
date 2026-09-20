@@ -191,6 +191,9 @@ class WorldState:
         return any(effect.name == name for effect in self.effects)
 
     def snapshot(self) -> dict[str, Any]:
+        # Single call site (firewall/runtime.py::_state_digest) immediately json.dumps()s this
+        # and never mutates it, so the defensive deepcopy of the whole world state was pure
+        # overhead on every guarded tool call. No copy needed for a read-only serialize.
         return {
             "collections": self.collections,
             "effects": [effect.__dict__ for effect in self.effects],
