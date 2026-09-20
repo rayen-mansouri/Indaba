@@ -1,10 +1,11 @@
 # Python defense starter kit
 
 **Optional.** SENTINEL does not require a specific architecture, language, or interface — you may
-build your solution however you choose (see `docs/scenario-authoring.md`'s sibling, the
-[Defense Rules](../../docs) in the participant spec). This kit is one example: a defense exposed as
-an HTTP service, following the same shape the CLI's `--defense-url` option expects. Copy it, change
-`app/decision.py`, and you have a working starting point — or ignore it entirely and build your own.
+build your solution however you choose (see
+[Defense Rules](../../docs/participant-guide.md#defense-rules) in the participant guide). This kit
+is one example: a defense exposed as an HTTP service, following the same shape the CLI's
+`--defense-url` option expects. Copy it, change `app/decision.py`, and you have a working starting
+point — or ignore it entirely and build your own.
 
 ```
 python-defense/
@@ -44,7 +45,7 @@ uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.y
   --defense-url http://127.0.0.1:8080 --model qwen3-8b
 
 # replay the trace -- this is the evidence your video is built around
-uv run sentinel replay artifacts/<run_id>.jsonl
+uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 `--model qwen3-8b` needs the weights downloaded ahead of time (`uv sync --extra hf`, then

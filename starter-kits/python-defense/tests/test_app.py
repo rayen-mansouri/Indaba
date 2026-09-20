@@ -1,5 +1,8 @@
+import pytest
 from app.main import app
+from app.models import MAX_METADATA_BYTES, DefenseDecision
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 client = TestClient(app)
 
@@ -67,3 +70,17 @@ def test_unknown_request_fields_are_ignored() -> None:
 
 def test_malformed_request_is_rejected() -> None:
     assert client.post("/v1/decision", json={"run_id": "r"}).status_code == 422
+
+
+@pytest.mark.parametrize("code", ["user_goal_aligned", "injection-detected", "A"])
+def test_reason_codes_must_be_upper_snake_case(code: str) -> None:
+    """The evaluator rejects these, and a rejected response fails closed for the whole run."""
+    with pytest.raises(ValidationError):
+        DefenseDecision(decision="allow", risk_score=0.1, confidence=0.5, reason_codes=[code])
+
+
+def test_metadata_is_bounded() -> None:
+    with pytest.raises(ValidationError):
+        DefenseDecision(
+            decision="allow", risk_score=0.1, confidence=0.5, metadata={"trace": "x" * (MAX_METADATA_BYTES + 1)}
+        )

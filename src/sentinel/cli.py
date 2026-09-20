@@ -331,9 +331,10 @@ def _run_eval(
     from sentinel.storage.runs import ArtifactStore
 
     competition = _competition(config)
-    suite = load_suite(scenarios_path)
-    if not suite:
-        raise typer.BadParameter(f"no scenarios found under {scenarios_path}")
+    try:
+        suite = load_suite(scenarios_path)
+    except ScenarioError as exc:
+        raise typer.BadParameter(f"no scenarios found under {scenarios_path}") from exc
     wrong = [s.id for s in suite if s.split.value != split]
     if wrong:
         raise typer.BadParameter(f"scenarios with a split other than {split!r}: {', '.join(wrong[:5])}")

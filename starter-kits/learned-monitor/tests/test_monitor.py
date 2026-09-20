@@ -1,11 +1,24 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
-from monitor import dataset, model
+from monitor import model
 from monitor.app import create_app
 from monitor.features import NUMERIC_FEATURES, numeric_features
 
-ROOT = Path(__file__).resolve().parents[3]
+
+def checkout_root() -> Path | None:
+    """The sentinel-bench checkout, or None if this kit was copied out of one.
+
+    Features, model, and service work standalone; only training needs the checkout, because it
+    labels examples by running the published scenarios through the simulator.
+    """
+    try:
+        from sentinel.config import find_root
+    except ImportError:
+        return None
+    root = find_root(Path(__file__).resolve().parent)
+    return root if (root / "scenarios" / "public").is_dir() else None
 
 
 def test_numeric_features_shape() -> None:
@@ -19,7 +32,12 @@ def test_numeric_features_shape() -> None:
 
 
 def test_train_decide_and_serve(tmp_path: Path) -> None:
-    requests, labels = dataset.build(ROOT / "scenarios" / "public", ROOT, limit=6)
+    root = checkout_root()
+    if root is None:
+        pytest.skip("training needs the sentinel-bench checkout; train there and copy the model (see README)")
+    from monitor import dataset
+
+    requests, labels = dataset.build(root / "scenarios" / "public", root, limit=6)
     assert 0 < sum(labels) < len(labels)
     classifier = model.train(requests, labels)
     path = model.save(classifier, tmp_path / "monitor.joblib")

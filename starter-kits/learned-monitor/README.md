@@ -39,7 +39,7 @@ uv run uvicorn monitor.app:create_app --factory --port 8080
 # in another shell, from the repository root:
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml \
   --defense-url http://127.0.0.1:8080 --model qwen3-8b
-uv run sentinel replay artifacts/<run_id>.jsonl
+uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 The reference agent is a preconfigured **Qwen3-8B** (`Qwen/Qwen3-8B`), running locally. Use

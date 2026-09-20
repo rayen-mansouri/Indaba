@@ -41,8 +41,7 @@ uv run sentinel replay artifacts/<group>/<run>.jsonl
 GNU Make is optional on Windows: the `Makefile` targets invoke these same `uv` commands. The
 latest 2026-09-20 regression collected 264 tests: `262 passed, 2 skipped`; both skips require
 Windows symlink privilege.
-See [BUILD_LOG.md](BUILD_LOG.md) for exact commands and limitations, the
-[technical report](docs/technical-report.md) for methods/results, the
+See the [technical report](docs/technical-report.md) for methods/results, the
 [evidence bundle](evidence/README.md) for scorecards and replayable traces, and the
 [offline trace viewer](observability/sentinel-trace-viewer.html) for the observability layer.
 
@@ -133,7 +132,7 @@ uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.y
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml --defense provenance --model qwen3-8b
 uv run sentinel run --scenario scenarios/public/enterprise/enterprise_project_status.yaml \
   --defense sentinel --attacker none --attack-mode none --model lmstudio:sentinel-qwen3-8b
-uv run sentinel replay artifacts/<eval-group>/<run_id>.jsonl
+uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 For the verified local GGUF path used during development:
@@ -163,10 +162,22 @@ the deterministic mock for that demonstration and say so explicitly.
 
 ## Build your defense
 
+The rule-based kit is self-contained — copy it anywhere and edit `app/decision.py`:
+
 ```bash
-cp -r starter-kits/python-defense ../my-defense   # or: cp -r starter-kits/learned-monitor ../my-defense
-# edit the decision logic
-cd ../my-defense && uv venv && uv pip install -r requirements.txt && uv run uvicorn app.main:app --port 8080
+cp -r starter-kits/python-defense ../my-defense
+cd ../my-defense && uv venv && uv pip install -r requirements.txt
+uv run uvicorn app.main:app --port 8080
+```
+
+The learned kit trains against this scenario library, so train it inside this checkout first
+(`monitor/train.py` imports `sentinel`); the resulting `model/monitor.joblib` is what the service
+and the Dockerfile load:
+
+```bash
+cd starter-kits/learned-monitor
+uv run python -m monitor.train                    # writes model/monitor.joblib
+uv run uvicorn monitor.app:create_app --factory --port 8080
 ```
 
 Then, from this repository, run it against the reference agent and record the trace your video and
@@ -175,7 +186,7 @@ report are built around:
 ```bash
 uv run sentinel run --scenario scenarios/public/finance/finance_false_approval.yaml \
   --defense-url http://127.0.0.1:8080 --model qwen3-8b
-uv run sentinel replay artifacts/<run_id>.jsonl
+uv run sentinel replay artifacts/<group>/<run>.jsonl
 ```
 
 See [docs/participant-guide.md](docs/participant-guide.md) and the starter kits:

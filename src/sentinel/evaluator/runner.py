@@ -27,7 +27,7 @@ from sentinel.core.result import (
     ScenarioOutcome,
     ToolExecution,
 )
-from sentinel.core.scenario import Scenario, child_seed, discover_scenarios, load_scenario
+from sentinel.core.scenario import Scenario, ScenarioError, child_seed, discover_scenarios, load_scenario
 from sentinel.core.state import WorldState
 from sentinel.defenses.interface import Defense
 from sentinel.evaluator.labels import PlanMatcher
@@ -432,7 +432,15 @@ def _digest(outcomes: Sequence[ScenarioOutcome], metrics: Metrics) -> str:
 
 
 def load_suite(path: Path) -> list[Scenario]:
-    return [load_scenario(p) for p in discover_scenarios(path)]
+    """Load every scenario under ``path``.
+
+    Raises rather than returning an empty suite: a run over zero scenarios reports perfect metrics,
+    which is the vacuous result the participant guide warns about.
+    """
+    files = discover_scenarios(path)
+    if not files:
+        raise ScenarioError(str(path), ["no scenario files found; check the path"])
+    return [load_scenario(p) for p in files]
 
 
 def evaluate(

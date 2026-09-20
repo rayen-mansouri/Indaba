@@ -1,14 +1,22 @@
 """Self-contained copies of the SENTINEL v1 defense API schemas.
 
-Requests ignore unknown fields so your service keeps working when organizers add context.
-Responses are strict: the evaluator rejects anything that does not match this shape.
+The request *envelope* ignores unknown fields, so your service keeps working when organizers add
+context around the action. The action shape itself and every response field are strict, exactly as
+strict as ``sentinel.core.actions``: the evaluator rejects anything that does not match, and a
+rejected response is treated as an unavailable defense — which fails closed and blocks every tool
+call for the rest of the run. Keep the constraints below in sync with the simulator.
 """
 
 from __future__ import annotations
 
+import json
+import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+MAX_METADATA_BYTES = 4_096
+REASON_CODE_PATTERN = r"^[A-Z][A-Z0-9_]{1,63}$"
 
 
 class _Lenient(BaseModel):
@@ -91,6 +99,25 @@ class DefenseDecision(BaseModel):
     explanation: str | None = Field(default=None, max_length=500)
     rewritten_action: CandidateAction | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("reason_codes")
+    @classmethod
+    def _valid_codes(cls, codes: list[str]) -> list[str]:
+        for code in codes:
+            if not re.fullmatch(REASON_CODE_PATTERN, code):
+                raise ValueError(f"invalid reason code {code!r}; use UPPER_SNAKE_CASE")
+        return codes
+
+    @field_validator("metadata")
+    @classmethod
+    def _bounded_metadata(cls, metadata: dict[str, Any]) -> dict[str, Any]:
+        try:
+            size = len(json.dumps(metadata))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("metadata must be JSON-serializable") from exc
+        if size > MAX_METADATA_BYTES:
+            raise ValueError(f"metadata exceeds {MAX_METADATA_BYTES} bytes")
+        return metadata
 
     @model_validator(mode="after")
     def _rewrite_needs_action(self) -> DefenseDecision:
