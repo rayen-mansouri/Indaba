@@ -281,6 +281,26 @@ def run_scenario(
         config.artifacts.prepare_event_path(config.artifact_group, run_id) if config.artifacts is not None else None
     )
     log = EventLog(run_id, clock, sink_path=artifact)
+    try:
+        return _run_scenario_body(
+            scenario, defense, config, attacker, run_id, state, clock, artifact, log, competition
+        )
+    finally:
+        log.close()
+
+
+def _run_scenario_body(
+    scenario: Scenario,
+    defense: Defense,
+    config: RunConfig,
+    attacker: Attacker | None,
+    run_id: str,
+    state: WorldState,
+    clock: LogicalClock,
+    artifact: Path | None,
+    log: EventLog,
+    competition: CompetitionConfig,
+) -> ScenarioRun:
     registry = registry_for_domain(scenario.domain.value)
     gateway = ToolGateway(registry, state)
     loaded_policy = load_policy(config.root, scenario.policy_profile)

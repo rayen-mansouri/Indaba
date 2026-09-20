@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -49,6 +50,7 @@ class DestinationMap(_Frozen):
         return stripped.lower() if "@" in stripped else stripped
 
 
+@lru_cache(maxsize=2048)
 def _comparable(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.lower())
 
