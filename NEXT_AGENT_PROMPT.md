@@ -32,8 +32,8 @@ protocol as well.
 
 ## Current checkpoint
 
-- Latest pushed checkpoint before the Mission Control unit: `0942e87` on `origin/main`. Verify the
-  current `HEAD` and `origin/main`; a later log entry records the Mission Control commit and push.
+- Latest tested Mission Control feature commit: `9d89c52` on `origin/main`. Verify the current
+  `HEAD` and `origin/main`; the final metadata commit may be one commit later.
 - Evidence-generating code commit: `c05a0b59d2f9b464d2099158ad123f26cc71ba3c`.
 - Official starter commit: `87944a1bbb4565fac853e017dac2727b0f377704`.
 - Custom defense is fully wired as `--defense sentinel`; it is not an unused library.
