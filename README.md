@@ -64,8 +64,11 @@ protected empty scope and returns a traced `TASK_AUTH_MISSING` block instead of 
 The live core also includes strict action normalization, trusted destination aliases,
 lineage-preserving decoding/transformation nodes, a protected one-time approval store, and
 deterministic G1–G7 evaluation. Policy-owned rewrites are validated from scratch and cannot fall
-back to the original action. Security events form a digest-linked proposal → decision → approval or
-rewrite → executor receipt → verified-state chain, checked by `verify_digest_linked_trace`.
+back to the original action. The intentionally narrow rewrite catalog covers redacted email drafts
+and non-privileged incident updates; payment safety is enforced through its authoritative lifecycle
+and approvals rather than by inventing missing preparation fields. Security events form a
+digest-linked proposal → decision → approval or rewrite → executor receipt → verified-state chain,
+checked by `verify_digest_linked_trace`.
 The JSONL is appended and flushed after every event, enabling the offline viewer's live-follow mode;
 event timestamps are deterministic logical time, not wall-clock latency.
 

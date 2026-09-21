@@ -39,6 +39,9 @@ actions, gate facts, severity, confidence, and short reason codes are recorded.
 - A permitted draft or note can still carry attacker-authored social-engineering text even when no
   protected value leaks and no message is sent.
 - Runtime policy mistakes can systematically authorize or deny the wrong class of action.
+- Rewrite coverage is deliberately narrow: only redacted email drafts and non-privileged incident
+  updates have policy-owned substitutions. Unsupported tools and payment transitions block or
+  follow approval/lifecycle handling instead of receiving a guessed rewrite.
 - Deterministic severity scores may be mistaken for population probabilities; they are not.
 - Logs can become a secondary confidential sink if deployed without access and retention controls.
 

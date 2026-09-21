@@ -464,6 +464,13 @@ class SentinelFirewallDefense(Defense):
 
     # ---- rewrite service ------------------------------------------------------------------
     def _safe_rewrite(self, original: CandidateAction, evaluation: GateEvaluation) -> CandidateAction | None:
+        """Instantiate a narrow policy-owned substitution from tool semantics.
+
+        Templates are keyed only by the normalized tool contract and failed gate reasons. They do
+        not receive a scenario identifier, expected outcome, reference plan, or evaluator label.
+        Adding a tool therefore requires an explicit, reviewed safe substitute; unknown tools and
+        unsupported failure modes remain blocked.
+        """
         reasons = set(evaluation.reason_codes)
         if original.tool == "email_send" and reasons & {
             "SENSITIVE_EGRESS",

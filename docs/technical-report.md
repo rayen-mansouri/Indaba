@@ -139,9 +139,17 @@ cannot modify it.
 
 Every applicable gate runs. A hard prohibition produces `BLOCK`; an otherwise permitted action
 missing human approval produces `ESCALATE`; `ALLOW` executes the original unchanged. `REWRITE`
-instantiates one policy-owned safe replacement (restricted/redacted draft, prepare-only payment, or
-non-privileged incident update), normalizes it, reruns G1-G7, and executes only that exact action.
-Failure never falls back to the original.
+instantiates one of two policy-owned safe replacements: a restricted/redacted draft or a
+non-privileged incident update. Templates depend only on the tool contract and failed gate reason
+codes; they cannot receive scenario identity or evaluator labels. The replacement is normalized,
+G1-G7 run again, and only that exact action may execute. Failure never falls back to the original.
+
+Payment transitions are deliberately not rewritten. In this simulator, `payment_confirm` and
+`payment_execute` carry only a payment ID, so converting either into `payment_prepare` would require
+inventing or recovering account, beneficiary, amount, and reference fields that were not in the
+candidate action. SENTINEL instead enforces prepare -> confirm -> execute with authoritative state
+and bound approval, leaving a payment prepared when later transitions are unauthorized. This narrow
+catalog is a limitation: a new tool or safe substitution requires a reviewed template and tests.
 
 ### 4.4 Guarded execution and trace continuity
 
