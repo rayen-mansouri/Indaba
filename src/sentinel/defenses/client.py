@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from sentinel.config import FailMode
 from sentinel.core.actions import Decision, DefenseDecision
+from sentinel.core.local_transport import require_loopback_url
 from sentinel.defenses.interface import Defense, DefenseRequest
 
 MAX_RESPONSE_BYTES = 64_000
@@ -51,7 +52,10 @@ class HttpDefense(Defense):
         self.transport_retries = transport_retries
         self.backoff_s = backoff_s
         self._client = httpx.Client(
-            base_url=base_url.rstrip("/"), timeout=timeout_s, transport=transport, follow_redirects=False
+            base_url=require_loopback_url(base_url, label="defense URL"),
+            timeout=timeout_s,
+            transport=transport,
+            follow_redirects=False,
         )
 
     def health(self) -> bool:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 
 from sentinel.agent.base import AgentContext
 from sentinel.models.base import TurnHints
@@ -55,3 +56,8 @@ def test_lmstudio_adapter_preserves_prompt_and_excludes_reference_plan() -> None
     assert captured["seed"] == 0
     assert captured["chat_template_kwargs"] == {"enable_thinking": False}
     assert "reference_plan" not in json.dumps(captured)
+
+
+def test_lmstudio_adapter_rejects_non_local_endpoint() -> None:
+    with pytest.raises(ValueError, match="loopback"):
+        LMStudioModelAdapter(base_url="https://example.invalid/v1")

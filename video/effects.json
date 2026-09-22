@@ -1,0 +1,41 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "duration": 420,
+  "segments": [
+    { "start": 0, "end": 25, "label": "REPLAY" },
+    { "start": 25, "end": 60, "label": "MOCK" },
+    { "start": 60, "end": 93.52, "label": "LIVE" },
+    { "start": 93.52, "end": 105, "label": "REPLAY" },
+    { "start": 105, "end": 130, "label": "MOCK" },
+    { "start": 130, "end": 210, "label": "REPLAY" },
+    { "start": 210, "end": 255, "label": "MOCK" },
+    { "start": 255, "end": 290, "label": "MOCK" },
+    { "start": 290, "end": 345, "label": "MOCK" },
+    { "start": 345, "end": 390, "label": "REPLAY" },
+    { "start": 390, "end": 420, "label": "REPLAY" }
+  ],
+  "clips": [
+    {
+      "file": "out/sentinel_demo_no_subtitles.mp4",
+      "label": "REPLAY",
+      "effects": [
+        { "type": "titleCard", "text": "SENTINEL / USEFUL EVEN UNDER ATTACK", "duration": 2 },
+        { "type": "zoom", "t0": 8, "t1": 14, "x": 0.5, "y": 0.48, "scale": 1.12 },
+        { "type": "highlight", "t0": 74, "t1": 82, "x": 0.03, "y": 0.78, "w": 0.52, "h": 0.1, "text": "benign task_success: true" },
+        { "type": "callout", "t0": 145, "t1": 154, "x": 0.14, "y": 0.32, "text": "attack_success: true -> false" },
+        { "type": "highlight", "t0": 155, "t1": 166, "x": 0.05, "y": 0.42, "w": 0.42, "h": 0.16, "text": "TASK_CAPABILITY_DENIED" },
+        { "type": "zoom", "t0": 155, "t1": 164, "x": 0.3, "y": 0.48, "scale": 1.25 },
+        { "type": "caption", "t0": 155, "t1": 166, "text": "G2_TASK_SCOPE: TASK_CAPABILITY_DENIED" },
+        { "type": "highlight", "t0": 168, "t1": 177, "x": 0.05, "y": 0.72, "w": 0.48, "h": 0.12, "text": "no execution receipt" },
+        { "type": "zoom", "t0": 224, "t1": 232, "x": 0.52, "y": 0.45, "scale": 1.16 },
+        { "type": "highlight", "t0": 267, "t1": 276, "x": 0.08, "y": 0.24, "w": 0.56, "h": 0.28, "text": "replacement revalidated from scratch" },
+        { "type": "callout", "t0": 276, "t1": 284, "x": 0.2, "y": 0.68, "text": "original remains blocked / no fallback" },
+        { "type": "zoom", "t0": 324, "t1": 334, "x": 0.55, "y": 0.4, "scale": 1.2 },
+        { "type": "highlight", "t0": 382, "t1": 392, "x": 0.05, "y": 0.18, "w": 0.58, "h": 0.42, "text": "source scorecard + split" },
+        { "type": "titleCard", "text": "REPRODUCE / INSPECT / CHALLENGE", "duration": 2 }
+      ]
+    }
+  ]
+}

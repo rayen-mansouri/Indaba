@@ -1,0 +1,20 @@
+{
+  "captions": [
+    {
+      "seq": 0,
+      "text": "The model proposes an action; SENTINEL derives effect, scope, provenance, sensitivity, and destination from trusted runtime state."
+    },
+    {
+      "seq": 2,
+      "text": "Every applicable gate is evaluated. Risk is deterministic policy severity, not a probability."
+    },
+    {
+      "seq": 10,
+      "text": "A restricted external send cannot execute. A policy-owned redacted draft is instantiated and revalidated from scratch."
+    },
+    {
+      "seq": 13,
+      "text": "Only the validated replacement reaches the guarded executor; the receipt and state transition share its digest."
+    }
+  ]
+}

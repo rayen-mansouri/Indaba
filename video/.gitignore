@@ -1,0 +1,16 @@
+tools/
+capture/
+audio/
+qa/
+local-config.json
+__pycache__/
+render/
+node_modules/
+evidence/
+graphics/
+recipes/
+out/*
+!out/sentinel_demo_no_subtitles.mp4
+!out/sentinel_demo_polished.mp4
+!out/sentinel_demo.srt
+!out/thumbnail.png

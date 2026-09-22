@@ -14,6 +14,7 @@ import httpx
 
 from sentinel.agent.base import AgentContext, Feedback
 from sentinel.core.actions import CandidateAction
+from sentinel.core.local_transport import require_loopback_url
 from sentinel.models.base import ModelAdapter, ModelError, TurnHints
 from sentinel.models.hf_adapter import SYSTEM_PROMPT, parse_action, tool_card
 
@@ -36,7 +37,7 @@ class LMStudioModelAdapter(ModelAdapter):
         client: httpx.Client | None = None,
     ) -> None:
         self._model = model
-        self._base_url = base_url.rstrip("/")
+        self._base_url = require_loopback_url(base_url, label="LM Studio URL")
         self._max_tokens = max_tokens
         self._max_context_chars = max_context_chars
         self._client = client or httpx.Client(timeout=timeout_s)

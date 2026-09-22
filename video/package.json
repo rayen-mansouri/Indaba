@@ -1,0 +1,23 @@
+{
+  "name": "sentinel-video-polish",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio remotion/index.tsx",
+    "render": "remotion render remotion/index.tsx SentinelPolish out/sentinel_demo_polished.mp4 --codec=h264 --image-format=jpeg --width=1920 --height=1080 --fps=30",
+    "frame": "node remotion/frame.cjs",
+    "typecheck": "tsc --noEmit",
+    "validate": "node remotion/validate-effects.cjs"
+  },
+  "dependencies": {
+    "@remotion/player": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "remotion": "^4.0.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.7.2"
+  }
+}

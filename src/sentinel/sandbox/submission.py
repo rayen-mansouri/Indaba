@@ -15,6 +15,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from sentinel.core.actions import ActionType, CandidateAction, DefenseDecision
+from sentinel.core.local_transport import LocalTransportError, require_loopback_url
 from sentinel.defenses.interface import DefenseRequest
 
 MANIFEST_NAME = "sentinel-submission.yaml"
@@ -189,7 +190,12 @@ def sample_defense_request() -> DefenseRequest:
 
 
 def _check_live(url: str, report: SubmissionReport, transport: httpx.BaseTransport | None = None) -> None:
-    with httpx.Client(base_url=url.rstrip("/"), timeout=10.0, transport=transport) as client:
+    try:
+        base_url = require_loopback_url(url, label="live defense URL")
+    except LocalTransportError as exc:
+        report.add("live_service", "fail", str(exc))
+        return
+    with httpx.Client(base_url=base_url, timeout=10.0, transport=transport) as client:
         try:
             health = client.get("/healthz")
             report.add("live_healthz", "pass" if health.status_code == 200 else "fail", f"HTTP {health.status_code}")

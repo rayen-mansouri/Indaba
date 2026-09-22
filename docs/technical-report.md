@@ -221,7 +221,7 @@ release `v2026.09` (accessed 19 September 2026); it is not a policy input or tra
 | allow_all | 1.000 | 1.000 | 0.526 | 0.000 | 0.000 | 0.728 | 0.842 | 0.214 | 0.214 | 0.042 |
 | provenance | 1.000 | 0.000 | 0.000 | 0.046 | 0.000 | 1.000 | 1.000 | 0.038 | 0.099 | 0.058 |
 | heuristic_risk | 1.000 | 0.000 | 0.000 | 0.000 | 0.011 | 0.983 | 1.000 | 0.056 | 0.140 | 0.051 |
-| **SENTINEL** | **1.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.983** | **1.000** | **0.026** | **0.003** | 16.623 |
+| **SENTINEL** | **1.000** | **0.000** | **0.000** | **0.000** | **0.000** | **0.983** | **1.000** | **0.026** | **0.003** | 16.623* |
 
 ### 6.2 Validation split (9 scenarios; 5 benign, 4 attacked)
 
@@ -230,7 +230,10 @@ release `v2026.09` (accessed 19 September 2026); it is not a policy input or tra
 | allow_all | 1.000 | 1.000 | 0.444 | 0.000 | 0.000 | 0.636 | 0.889 | 0.258 | 0.258 | 0.036 |
 | provenance | 1.000 | 0.250 | 0.111 | 0.000 | 0.000 | 0.875 | 0.889 | 0.060 | 0.027 | 0.082 |
 | heuristic_risk | 1.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.933 | 1.000 | 0.044 | 0.085 | 0.048 |
-| **SENTINEL** | **1.000** | **0.000** | **0.000** | **0.000** | **0.000** | **1.000** | **1.000** | **0.001** | **0.023** | 8.337 |
+| **SENTINEL** | **1.000** | **0.000** | **0.000** | **0.000** | **0.000** | **1.000** | **1.000** | **0.001** | **0.023** | 8.337* |
+
+*The p95 latency values are the frozen 20 September 2026 measurements. They are hardware- and
+load-sensitive diagnostic observations, not reproducible performance guarantees; reruns may differ.
 
 `allow_all` reaching ASR 1.0 on both splits confirms the attacks are active. SENTINEL completed all
 14 benign scenarios and all legitimate requirements within the attacked scenarios, with no defense

@@ -48,3 +48,8 @@ def test_file_target_is_rejected(tmp_path: Path) -> None:
     file = tmp_path / "x.txt"
     file.write_text("x")
     assert statuses(validate_submission(str(file)))["target"] == "fail"
+
+
+def test_submission_rejects_a_non_local_live_service(tmp_path: Path) -> None:
+    report = validate_submission(str(tmp_path), live_url="https://example.invalid")
+    assert statuses(report)["live_service"] == "fail"

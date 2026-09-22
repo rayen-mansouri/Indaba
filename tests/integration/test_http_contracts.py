@@ -41,7 +41,7 @@ def test_transport_failures_are_retried_but_bad_responses_are_not() -> None:
             raise httpx.ConnectError("down", request=request)
         return httpx.Response(200, json={"decision": "allow", "risk_score": 0.1, "confidence": 0.9})
 
-    defense = HttpDefense("http://defense", transport=httpx.MockTransport(flaky), transport_retries=2, backoff_s=0)
+    defense = HttpDefense("http://127.0.0.1", transport=httpx.MockTransport(flaky), transport_retries=2, backoff_s=0)
     assert defense.decide(sample_defense_request()).decision is Decision.ALLOW and calls["n"] == 3
 
     errors = {"n": 0}
@@ -50,7 +50,7 @@ def test_transport_failures_are_retried_but_bad_responses_are_not() -> None:
         errors["n"] += 1
         return httpx.Response(500)
 
-    broken = HttpDefense("http://defense", transport=httpx.MockTransport(server_error), backoff_s=0)
+    broken = HttpDefense("http://127.0.0.1", transport=httpx.MockTransport(server_error), backoff_s=0)
     with pytest.raises(DefenseUnavailable, match="HTTP 500"):
         broken.decide(sample_defense_request())
     assert errors["n"] == 1

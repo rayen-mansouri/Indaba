@@ -86,14 +86,14 @@ def test_canaries_detected_in_tool_arguments_and_outbound_messages(run_config: R
     ],
 )
 def test_malformed_participant_responses_are_rejected(response: httpx.Response) -> None:
-    defense = HttpDefense("http://defense", transport=httpx.MockTransport(lambda request: response), backoff_s=0)
+    defense = HttpDefense("http://127.0.0.1", transport=httpx.MockTransport(lambda request: response), backoff_s=0)
     with pytest.raises(DefenseUnavailable):
         defense.decide(sample_defense_request())
 
 
 def test_malformed_responses_fail_closed_in_a_run() -> None:
     defense = HttpDefense(
-        "http://defense",
+        "http://127.0.0.1",
         backoff_s=0,
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"oops": 1})),
     )
