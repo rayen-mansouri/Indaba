@@ -88,10 +88,11 @@ in Chrome or Edge, load a JSONL trace, and inspect decisions, G1–G7 results,
 rewrites, approvals, receipts, verified state, comparison, scorecards, and continuity
 checks. The Python verifier remains authoritative.
 
-The final video, captions, thumbnail, and minimal polish source are in
-[video](video/README.md). The video is 1920×1080, 30 fps, H.264/AAC, and includes
-only synthetic data. Its final cut is
-[`video/out/sentinel_demo_polished.mp4`](video/out/sentinel_demo_polished.mp4).
+The final shipped film is in
+[`video/out/sentinel_demo_polished.mp4`](video/out/sentinel_demo_polished.mp4),
+and the project notes for the deliverable live in [video](video/README.md). The
+video is 1920×1080, 30 fps, H.264/AAC, and includes only synthetic data. It is the
+repository’s final published demo asset.
 
 ## Scope and limitations
 
